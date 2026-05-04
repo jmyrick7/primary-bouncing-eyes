@@ -1,0 +1,4588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sing Louder! Bouncing Balls</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: white;
+    background: #0a0e27;
+  }
+  canvas {
+    display: block;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+  #startScreen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    text-align: center;
+    padding: 20px;
+  }
+  #startScreen h1 {
+    font-size: clamp(2rem, 6vw, 5rem);
+    margin: 0 0 20px;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcf7f, #4d96ff, #c780ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  #startScreen p {
+    font-size: clamp(1rem, 2.5vw, 1.6rem);
+    margin: 10px 0 30px;
+    max-width: 700px;
+  }
+  .bigBtn {
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    padding: 20px 50px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+    color: #1a1f4e;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(255, 107, 107, 0.5);
+    transition: transform 0.2s;
+  }
+  .bigBtn:hover { transform: scale(1.05); }
+
+  #meter {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    width: 220px;
+    height: 18px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+  }
+  #meterFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #6bcf7f, #ffd93d, #ff6b6b);
+    transition: width 0.05s linear;
+  }
+  #meterLabel {
+    position: fixed;
+    top: 38px;
+    left: 16px;
+    font-size: 0.85rem;
+    opacity: 0.7;
+    z-index: 5;
+  }
+
+  #encourage {
+    position: fixed;
+    top: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(2rem, 7vw, 6rem);
+    font-weight: 900;
+    text-shadow: 0 0 30px rgba(255,255,255,0.6);
+    pointer-events: none;
+    z-index: 5;
+    transition: opacity 0.3s;
+    opacity: 0;
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bcf7f, #4d96ff, #c780ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.05em;
+  }
+
+  #settingsToggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 20;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  #settingsToggle:hover { background: rgba(0,0,0,0.7); }
+
+  #finishBtn {
+    position: fixed;
+    top: 12px;
+    /* Volume meter is 16px from left and 220px wide → sits just to its right */
+    left: 248px;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    backdrop-filter: blur(6px);
+    font-family: inherit;
+    opacity: 0.7;
+  }
+  #finishBtn:hover { opacity: 1; background: rgba(255, 255, 255, 0.2); }
+  #finishBtn.hidden { display: none; }
+
+  #settings {
+    position: fixed;
+    top: 70px;
+    right: 16px;
+    width: 320px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+    background: rgba(15, 20, 50, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 18px;
+    z-index: 15;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  #settings.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+  }
+  #settings h3 {
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+  }
+  .group { margin-bottom: 16px; }
+  .sliderRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sliderRow input[type=range] {
+    flex: 1;
+    accent-color: #ffd93d;
+  }
+  .sliderRow .val {
+    width: 44px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+  .modeGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .modeBtn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .modeBtn:hover { background: rgba(255,255,255,0.18); }
+  .modeBtn.active {
+    background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+    color: #1a1f4e;
+    font-weight: 700;
+    border-color: transparent;
+  }
+  .lockBtn {
+    margin-top: 8px;
+    width: 100%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: white;
+    padding: 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .lockBtn:hover { background: rgba(255,255,255,0.18); }
+  .lockBtn.locked {
+    background: linear-gradient(90deg, #ffd93d, #6bcf7f);
+    color: #1a1f4e;
+    font-weight: 700;
+    border-color: transparent;
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>Sing Louder, Bounce Higher!</h1>
+  <p>Click the button, then allow microphone access. The louder the kids sing, the higher the balls bounce!</p>
+  <button id="startBtn" class="bigBtn">Start the Fun!</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="meter"><div id="meterFill"></div></div>
+<div id="meterLabel">Volume</div>
+<div id="encourage"></div>
+
+<button id="settingsToggle" title="Settings">&#9881;</button>
+<button id="finishBtn" class="hidden">Finish!</button>
+
+<div id="settings" class="hidden">
+  <div class="group">
+    <h3>Mic Sensitivity</h3>
+    <div class="sliderRow">
+      <input type="range" id="sensSlider" min="0.5" max="25" step="0.1" value="3">
+      <div class="val" id="sensVal">2.5x</div>
+    </div>
+    <button id="autoSensBtn" class="lockBtn">Manual</button>
+  </div>
+
+  <div class="group">
+    <h3>Number of Balls</h3>
+    <div class="sliderRow">
+      <input type="range" id="countSlider" min="1" max="60" step="1" value="1">
+      <div class="val" id="countVal">1</div>
+    </div>
+    <button id="lockBtn" class="lockBtn locked">Locked at fixed count</button>
+  </div>
+
+  <div class="group">
+    <h3>Ball Style</h3>
+    <div class="modeGrid" id="ballModes"></div>
+  </div>
+
+  <div class="group">
+    <h3>Planet</h3>
+    <div class="modeGrid" id="planetModes"></div>
+  </div>
+
+  <div class="group">
+    <h3>Bounciness</h3>
+    <div class="sliderRow">
+      <input type="range" id="bounceSlider" min="0.4" max="0.99" step="0.01" value="0.86">
+      <div class="val" id="bounceVal">0.78</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Setup =====
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const meterFill = document.getElementById('meterFill');
+const encourage = document.getElementById('encourage');
+const startBtn = document.getElementById('startBtn');
+const startScreen = document.getElementById('startScreen');
+const settingsToggle = document.getElementById('settingsToggle');
+const settings = document.getElementById('settings');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ===== Settings state =====
+const state = {
+  sensitivity: 3,
+  autoSensitivity: true,
+  ballCount: 1,
+  ballCountLock: false,
+  ballMode: 'eyeball',
+  planet: 'earth',
+  restitution: 0.86,
+};
+
+// ===== Planets (gravity in px/s^2 plus visual style) =====
+// Real gravity ratios applied to a base of ~2200 px/s^2 (feels right at TV sizes)
+const BASE_G = 2200;
+const PLANETS = {
+  earth:   { name: 'Earth',   gMul: 1.00, drag: 0.999, bg: ['#0a0e27', '#1a1f4e', '#2d1b69'] },
+  moon:    { name: 'Moon',    gMul: 0.165, drag: 0.999, bg: ['#1a1a2e', '#2c2c44', '#4a4a5e'] },
+  space:   { name: 'Space',   gMul: 0.00, drag: 0.998, bg: ['#000000', '#08081a', '#0d0d2b'] },
+  water:   { name: 'Underwater', gMul: 0.25, drag: 0.97, bg: ['#001a33', '#003366', '#0066aa'] },
+};
+
+// ===== Ball modes =====
+const BALL_MODES = {
+  classic:    'Classic',
+  soccer:     'Soccer',
+  eyeball:    'Eyeballs',
+  watermelon: 'Watermelon',
+  tennis:     'Tennis',
+  popcorn:    'Popcorn',
+  soapbubble: 'Bubbles',
+  trebuchet:  'Trebuchet (game)',
+};
+
+// ===== Trebuchet game =====
+// Phases:
+//   'cocking'   — singing winds the long arm down (sling lowers, counterweight rises)
+//   'releasing' — short whip animation when the user fires
+//   'flying'    — the eyeball is airborne; camera follows it; benchmarks scroll past
+//   'landed'    — final distance shown; "Throw Again" button to reset
+const TREB = {
+  G_FT:  13,        // gravity in ft/s² (low → longer hang time, leisurely flight)
+  MAX_V: 200,       // ft/s at full charge → ~2500ft for 100%, into Logan/Sacred Grove range
+  CHARGE_RATE: 0.18, // charge per second at loudness=1.0 (a typical song should fully charge)
+  RELEASE_DUR: 0.45, // seconds the whip animation takes
+  RELEASE_AT: 0.62,  // releaseT at which the sling lets go (sling tip ≈ +45°)
+  PX_PER_FT: 2.4,    // world-foot to screen-pixel during flight (faster scroll)
+  LAUNCH_ANGLE: Math.PI / 9, // 20° — shallow so the eyeball cruises high, not pops up
+};
+const treb = {
+  phase: 'cocking',
+  charge: 0,                  // 0..1.5
+  releaseT: 0,                // 0..1 progress through release animation
+  // After flight starts, position is in WORLD FEET. ground = y = 0.
+  fx: 0, fy: 0,               // ft (relative to launch point)
+  vx: 0, vy: 0,               // ft/s
+  rotation: 0,                // visual eyeball rotation
+  rotVel: 0,
+  distance: 0,                // final landed distance, ft
+  // Computed once on release so flight uses fixed initial v
+  releaseV: 0,
+  flightAnchorX: 0,           // where the flying eyeball sits on screen (eased over time)
+  sailing: false,             // true if eyeball landed on the Mayflower (ship sails away)
+  shipFt: 0,                  // world-ft of the Mayflower while sailing
+  brokenAt: 0,                // perf.now() when the trebuchet broke (for animations)
+  pieces: [],                 // wreckage pieces with physics during 'broken' phase
+};
+function trebReset() {
+  treb.phase = 'cocking';
+  treb.charge = 0;
+  treb.releaseT = 0;
+  treb.fx = 0; treb.fy = 0;
+  treb.vx = 0; treb.vy = 0;
+  treb.rotation = 0; treb.rotVel = 0;
+  treb.distance = 0;
+  treb.releaseV = 0;
+  treb.flightAnchorX = 0;
+  treb.sailing = false;
+  treb.shipFt = 0;
+  treb.brokenAt = 0;
+  treb.pieces = [];
+  splats.length = 0;          // clear pumpkin/eyeball pieces from prior throws
+}
+function trebFire() {
+  if (treb.phase !== 'cocking' || treb.charge < 0.05) return;
+  // Easter egg — at 249%+ charge, the arm snaps and the whole thing breaks.
+  if (treb.charge >= 2.49) {
+    treb.phase = 'broken';
+    treb.brokenAt = performance.now();
+    initBrokenPieces();
+    return;
+  }
+  treb.phase = 'releasing';
+  treb.releaseT = 0;
+  treb.releaseV = TREB.MAX_V * Math.sqrt(treb.charge);
+}
+
+// Cocking parameter 0..1 → drives long-arm angle.
+//   0  : arm horizontal (idle, sling at standby)
+//   1  : arm fully cocked (sling on ground, counterweight up high)
+function trebArmAngle(cock, releaseT) {
+  // Math convention: theta measured CCW from +x. sin(theta) up = positive.
+  //   idle (charge=0):   90°   long arm vertical, pointing UP
+  //   cocked (charge=1): ~213° long arm drooping back-and-down (sling on ground behind)
+  // Cocking sweeps CCW (theta increases). On release the arm whips CW
+  // (theta decreases) all the way around through forward, ending past
+  // horizontal forward.
+  const idle = Math.PI / 2;
+  const cocked = Math.PI * 1.18;
+  const theta = idle + (cocked - idle) * cock;
+  if (releaseT <= 0) return theta;
+  const releaseEnd = -Math.PI / 6; // -30° (just past horizontal forward)
+  const e = releaseT < 0.5
+    ? 4 * releaseT * releaseT * releaseT
+    : 1 - Math.pow(-2 * releaseT + 2, 3) / 2;
+  return theta + (releaseEnd - theta) * e;
+}
+
+// Trebuchet pivot location and arm dimensions, as a function of canvas size.
+function trebGeom() {
+  const groundY = H * 0.85;
+  const baseHalf = Math.min(190, W * 0.105);   // half-width of the wooden A-frame base
+  const pivotX  = W * 0.5;                     // mid-screen so cocked arm has room going LEFT
+  const pivotY  = groundY - baseHalf * 1.55;   // top of A-frame
+  const longLen  = Math.min(440, W * 0.27);
+  const shortLen = longLen * 0.42;
+  return { groundY, baseHalf, pivotX, pivotY, longLen, shortLen };
+}
+
+function trebUpdate(dt, raw, smoothed, peak) {
+  if (treb.phase === 'cocking') {
+    // Charge accumulates with louder singing. Use the bigger of raw/smoothed
+    // so a sustained sing AND quick spikes both build it.
+    const drive = Math.max(smoothed, peak * 0.6);
+    treb.charge += drive * TREB.CHARGE_RATE * dt;
+    treb.charge = Math.min(2.5, treb.charge);
+  }
+  else if (treb.phase === 'releasing') {
+    treb.releaseT += dt / TREB.RELEASE_DUR;
+    // Sling lets go around the time the sling-tip is up-and-forward (~45°),
+    // so the eyeball naturally launches in that direction.
+    if (treb.releaseT >= TREB.RELEASE_AT) {
+      treb.phase = 'flying';
+      treb.releaseT = 1;
+      const angle = TREB.LAUNCH_ANGLE;
+      treb.vx = treb.releaseV * Math.cos(angle);
+      treb.vy = treb.releaseV * Math.sin(angle);
+      treb.fx = 0;
+      treb.rotVel = 6 + Math.random() * 4;
+      // Snap both the camera anchor AND the starting altitude to the sling
+      // tip's current screen position — flight begins exactly where the
+      // release animation left off, eyeball already up high.
+      const g = trebGeom();
+      const slingLen = g.longLen * 0.45;
+      const theta = trebArmAngle(1, TREB.RELEASE_AT);
+      const lag = (1 - TREB.RELEASE_AT) * (Math.PI / 3);
+      const trailTheta = theta + lag;
+      const launchScreenX = g.pivotX + Math.cos(trailTheta) * (g.longLen + slingLen);
+      const launchScreenY = g.pivotY - Math.sin(trailTheta) * (g.longLen + slingLen);
+      treb.flightAnchorX = launchScreenX;
+      treb.fy = Math.max(0, (g.groundY - launchScreenY) / TREB.PX_PER_FT);
+      // Guaranteed Mayflower landing: at 200%+ charge, tune vx so the eyeball
+      // touches down exactly on the ship's deck (no overshoot).
+      if (treb.charge >= 2.0) {
+        const mayflower = TREB_LANDMARKS.find(l => l.water);
+        if (mayflower) {
+          // Solve for landing time given vy and launch height: 0 = fy + vy*t - 0.5*g*t²
+          const tLand = (treb.vy + Math.sqrt(treb.vy * treb.vy + 2 * TREB.G_FT * treb.fy)) / TREB.G_FT;
+          treb.vx = mayflower.ft / tLand;
+        }
+      }
+    }
+  }
+  else if (treb.phase === 'flying') {
+    treb.vy -= TREB.G_FT * dt;
+    treb.fx += treb.vx * dt;
+    treb.fy += treb.vy * dt;
+    treb.rotation += treb.rotVel * dt;
+    // Eyeball stays roughly centered while world scrolls under it.
+    const targetAnchor = W * 0.5;
+    treb.flightAnchorX += (targetAnchor - treb.flightAnchorX) * Math.min(1, dt * 1.4);
+    if (treb.fy <= 0 && treb.vy < 0) {
+      treb.phase = 'landed';
+      treb.distance = Math.round(treb.fx);
+      treb.fy = 0;
+      treb.vx = 0; treb.vy = 0;
+      // If we landed at or past the Mayflower, the eyeball lands ON the ship —
+      // ship starts sailing instead of splatting on water.
+      const mayflower = TREB_LANDMARKS.find(l => l.water);
+      if (mayflower && treb.fx >= mayflower.ft - 60) {
+        treb.sailing = true;
+        treb.shipFt = mayflower.ft;
+        treb.fx = mayflower.ft;     // snap eyeball to ship
+      } else {
+        // Normal land splat
+        const screen = trebFlightScreenPos();
+        splats.push(new Splat(screen.x, 76, 'eyeball', '#4d96ff'));
+      }
+    }
+  }
+  else if (treb.phase === 'landed' && treb.sailing) {
+    // Ship sails forward steadily, eyeball rides along
+    const SAIL_SPEED = 55; // ft/s
+    treb.shipFt += SAIL_SPEED * dt;
+    treb.fx = treb.shipFt;
+  }
+  else if (treb.phase === 'broken') {
+    // Wreckage falls + tumbles + settles in real time
+    updateBrokenPieces(dt);
+  }
+}
+
+// Convert flight world feet → on-screen pixel position (camera follows the eyeball).
+function trebFlightScreenPos() {
+  const g = trebGeom();
+  // Clamp to the top so a tall arc never escapes the canvas.
+  const rawY = g.groundY - treb.fy * TREB.PX_PER_FT;
+  return { x: treb.flightAnchorX, y: Math.max(70, rawY) };
+}
+
+// World-feet to screen-x for any given foot offset (used by benchmarks).
+function trebWorldToScreenX(worldFt) {
+  return treb.flightAnchorX + (worldFt - treb.fx) * TREB.PX_PER_FT;
+}
+
+// LDS landmark silhouettes drawn along the ground — the eyeball flies over
+// these. Few, recognizable, properly scaled relative to each other.
+const TREB_LANDMARKS = [
+  { ft: 700,  draw: drawSLCTemple,        label: 'Salt Lake Temple' },
+  { ft: 1400, draw: drawMtTimpanogos,     label: 'Mt. Timpanogos' },
+  { ft: 2000, draw: drawPioneerHandcarts, label: 'Pioneer Handcarts' },
+  { ft: 2600, draw: drawSacredGrove,      label: 'Sacred Grove' },
+  { ft: 4400, draw: drawMayflower,        label: 'The Mayflower', water: true },
+];
+// Distance threshold past which we're "at sea" — switches the ground band to ocean.
+const OCEAN_START_FT = 4100;
+
+// === Landmark renderers (origin = ground level under the building) ===
+
+// Original 1972 Provo Temple: wide oval/lens-shaped main building with
+// vertical fluted columns, a tall thin central spire, and Moroni on top.
+function drawProvoTemple(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = '#7a6a4a';
+  ctx.lineWidth = 1.4;
+  // Wide flat platform/base
+  ctx.fillStyle = '#e8e0c8';
+  ctx.fillRect(-120, -14, 240, 14);
+  ctx.strokeRect(-120, -14, 240, 14);
+  // Lower oval skirt
+  ctx.fillStyle = '#f1ead0';
+  ctx.beginPath();
+  ctx.ellipse(0, -22, 110, 12, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Main oval body (the lens-shaped chapel)
+  ctx.fillStyle = '#f8f1da';
+  ctx.beginPath();
+  ctx.ellipse(0, -56, 100, 38, 0, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Vertical fluting (thin pillared bands across the oval)
+  ctx.strokeStyle = 'rgba(120, 100, 70, 0.55)';
+  ctx.lineWidth = 1;
+  for (let i = -9; i <= 9; i++) {
+    const px = i * 10;
+    if (Math.abs(px) > 96) continue;
+    const dy = 38 * Math.sqrt(1 - (px / 100) ** 2);
+    ctx.beginPath();
+    ctx.moveTo(px, -56 - dy + 3);
+    ctx.lineTo(px, -56 + dy - 3);
+    ctx.stroke();
+  }
+  // Tall thin central spire (a pillar with subtle banding)
+  ctx.fillStyle = '#fffaea';
+  ctx.strokeStyle = '#7a6a4a';
+  ctx.lineWidth = 1.2;
+  ctx.fillRect(-4, -150, 8, 56);
+  ctx.strokeRect(-4, -150, 8, 56);
+  // Spire taper
+  ctx.fillStyle = '#fffaea';
+  ctx.beginPath();
+  ctx.moveTo(-4, -150);
+  ctx.lineTo(0, -178);
+  ctx.lineTo(4, -150);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Bands near the top of the spire
+  ctx.beginPath(); ctx.moveTo(-5, -135); ctx.lineTo(5, -135); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-5, -125); ctx.lineTo(5, -125); ctx.stroke();
+  // Moroni
+  ctx.fillStyle = '#e6c14a';
+  ctx.beginPath();
+  ctx.moveTo(0, -190);
+  ctx.lineTo(-3, -178);
+  ctx.lineTo(3, -178);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Salt Lake Temple: 6 corner spires + tall central spire with Moroni,
+// crenellated body, vertical buttresses, arched windows.
+function drawSLCTemple(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = '#6e5e44';
+  ctx.lineWidth = 1.4;
+  // Granite body
+  ctx.fillStyle = '#d4c8b0';
+  ctx.fillRect(-130, -100, 260, 100);
+  ctx.strokeRect(-130, -100, 260, 100);
+  // Vertical buttress columns
+  ctx.fillStyle = '#cabe9e';
+  for (let i = -5; i <= 5; i++) {
+    const px = i * 26;
+    ctx.fillRect(px - 4, -100, 8, 100);
+    ctx.strokeRect(px - 4, -100, 8, 100);
+  }
+  // Battlement crenellations along the top
+  ctx.fillStyle = '#d4c8b0';
+  for (let i = -130; i < 130; i += 18) {
+    ctx.fillRect(i + 2, -110, 11, 10);
+    ctx.strokeRect(i + 2, -110, 11, 10);
+  }
+  // Arched windows (3 rows between buttresses)
+  ctx.fillStyle = 'rgba(60, 80, 110, 0.45)';
+  for (let row = 0; row < 3; row++) {
+    const wy = -90 + row * 28;
+    for (let i = -4; i <= 4; i++) {
+      const cx = i * 26 + 13;
+      if (i === 4) continue; // right edge
+      // arched-top window
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, wy + 18);
+      ctx.lineTo(cx - 5, wy + 5);
+      ctx.arc(cx, wy + 5, 5, Math.PI, 0, true);
+      ctx.lineTo(cx + 5, wy + 18);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  // 7 spires (3 left + center tallest with Moroni + 3 right)
+  const spires = [
+    { x: -110, h: 60 },
+    { x:  -75, h: 85 },
+    { x:  -40, h: 70 },
+    { x:    0, h: 130, moroni: true },
+    { x:   40, h: 70 },
+    { x:   75, h: 85 },
+    { x:  110, h: 60 },
+  ];
+  ctx.fillStyle = '#d4c8b0';
+  for (const s of spires) {
+    // Tower base block
+    ctx.fillRect(s.x - 10, -110, 20, 14);
+    ctx.strokeRect(s.x - 10, -110, 20, 14);
+    // Mini-crenellations on tower base
+    for (let cx = s.x - 9; cx < s.x + 9; cx += 5) {
+      ctx.fillRect(cx, -118, 3, 8);
+    }
+    // Tower body
+    ctx.fillRect(s.x - 7, -110 - s.h * 0.55, 14, s.h * 0.55);
+    ctx.strokeRect(s.x - 7, -110 - s.h * 0.55, 14, s.h * 0.55);
+    // Pointed spire top
+    ctx.beginPath();
+    ctx.moveTo(s.x - 7, -110 - s.h * 0.55);
+    ctx.lineTo(s.x,     -110 - s.h);
+    ctx.lineTo(s.x + 7, -110 - s.h * 0.55);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Small decorative pinnacles at each tower's corners
+    ctx.fillStyle = '#bdb098';
+    ctx.fillRect(s.x - 11, -110 - s.h * 0.55 + 4, 3, s.h * 0.18);
+    ctx.fillRect(s.x +  8, -110 - s.h * 0.55 + 4, 3, s.h * 0.18);
+    ctx.fillStyle = '#d4c8b0';
+    // Moroni on the central tower
+    if (s.moroni) {
+      ctx.fillStyle = '#e6c14a';
+      ctx.beginPath();
+      ctx.arc(s.x, -110 - s.h - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s.x, -110 - s.h - 12);
+      ctx.lineTo(s.x - 3, -110 - s.h - 4);
+      ctx.lineTo(s.x + 3, -110 - s.h - 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#d4c8b0';
+    }
+  }
+  ctx.restore();
+}
+
+// Logan Temple: castellated body with two tall corner towers capped by
+// pavilion-style cupolas and small spires (the older "fortress" style).
+function drawLoganTemple(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = '#5a4a52';
+  ctx.lineWidth = 1.4;
+  // Stepped foundation
+  ctx.fillStyle = '#a89488';
+  ctx.fillRect(-130, -10, 260, 10);
+  ctx.strokeRect(-130, -10, 260, 10);
+  // Body — warm purple-stone
+  ctx.fillStyle = '#a08494';
+  ctx.fillRect(-110, -86, 220, 76);
+  ctx.strokeRect(-110, -86, 220, 76);
+  // Buttress lines (vertical)
+  ctx.strokeStyle = 'rgba(70,55,65,0.7)';
+  for (let i = -3; i <= 3; i++) {
+    const px = i * 32;
+    ctx.beginPath();
+    ctx.moveTo(px, -86); ctx.lineTo(px, -10);
+    ctx.stroke();
+  }
+  // Body crenellations (between towers)
+  ctx.strokeStyle = '#5a4a52';
+  ctx.fillStyle = '#a08494';
+  for (let i = -54; i < 54; i += 12) {
+    ctx.fillRect(i, -94, 7, 8);
+    ctx.strokeRect(i, -94, 7, 8);
+  }
+  // Two corner towers (taller blocks, one slightly taller)
+  const towers = [
+    { x: -110, w: 56, h: 118, capH: 36 }, // left, taller (east)
+    { x:   54, w: 56, h: 100, capH: 32 }, // right (west)
+  ];
+  for (const t of towers) {
+    // Tower body
+    ctx.fillStyle = '#a08494';
+    ctx.fillRect(t.x, -86 - (t.h - 76), t.w, t.h);
+    ctx.strokeRect(t.x, -86 - (t.h - 76), t.w, t.h);
+    // Tower crenellations
+    const topY = -86 - (t.h - 76);
+    for (let cx = t.x; cx < t.x + t.w; cx += 10) {
+      ctx.fillRect(cx, topY - 7, 6, 7);
+      ctx.strokeRect(cx, topY - 7, 6, 7);
+    }
+    // Pavilion cupola
+    const cupX = t.x + t.w / 2;
+    const cupY = topY - 7;
+    ctx.fillStyle = '#e8d8c4';
+    ctx.beginPath();
+    ctx.ellipse(cupX, cupY - t.capH * 0.5, t.w * 0.4, t.capH * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // Small finial spire on the cupola
+    ctx.fillStyle = '#a08494';
+    ctx.beginPath();
+    ctx.moveTo(cupX - 3, cupY - t.capH);
+    ctx.lineTo(cupX,     cupY - t.capH - 14);
+    ctx.lineTo(cupX + 3, cupY - t.capH);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Tower windows (arched)
+    ctx.fillStyle = 'rgba(60, 50, 70, 0.5)';
+    for (let row = 0; row < 2; row++) {
+      const wy = -64 + row * 22;
+      ctx.beginPath();
+      ctx.moveTo(cupX - 6, wy + 14);
+      ctx.lineTo(cupX - 6, wy + 4);
+      ctx.arc(cupX, wy + 4, 6, Math.PI, 0, true);
+      ctx.lineTo(cupX + 6, wy + 14);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  // Body windows (arched, two rows)
+  ctx.fillStyle = 'rgba(60, 50, 70, 0.45)';
+  for (let row = 0; row < 2; row++) {
+    const wy = -68 + row * 26;
+    for (let cx = -88; cx <= 88; cx += 22) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, wy + 14);
+      ctx.lineTo(cx - 5, wy + 4);
+      ctx.arc(cx, wy + 4, 5, Math.PI, 0, true);
+      ctx.lineTo(cx + 5, wy + 14);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+function drawSacredGrove(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  // Cluster of trees
+  const trees = [
+    { x: -72, w: 36, h: 80 },
+    { x: -28, w: 50, h: 110 },
+    { x:  20, w: 44, h: 95 },
+    { x:  68, w: 38, h: 80 },
+  ];
+  for (const t of trees) {
+    // Trunk
+    ctx.fillStyle = '#5a3818';
+    ctx.fillRect(t.x - 5, -32, 10, 32);
+    // Foliage layered
+    ctx.fillStyle = '#2e6c1f';
+    ctx.beginPath();
+    ctx.ellipse(t.x, -t.h + 32, t.w * 0.55, t.h * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#5dab2d';
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.w * 0.18, -t.h + 32, t.w * 0.38, t.h * 0.38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(180, 230, 130, 0.5)';
+    ctx.beginPath();
+    ctx.ellipse(t.x - t.w * 0.3, -t.h + 24, t.w * 0.18, t.h * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Mt. Timpanogos — wide jagged mountain with snowy peaks (LDS-cherished landmark)
+function drawMtTimpanogos(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  // Distant ridge silhouette (back range)
+  ctx.fillStyle = '#7282a0';
+  ctx.beginPath();
+  ctx.moveTo(-200, 0);
+  ctx.lineTo(-160, -60);
+  ctx.lineTo(-110, -90);
+  ctx.lineTo(-50, -130);
+  ctx.lineTo(20, -110);
+  ctx.lineTo(90, -150);
+  ctx.lineTo(170, -100);
+  ctx.lineTo(220, -50);
+  ctx.lineTo(220, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Foreground mountain — bigger, jagged
+  const peaks = [
+    { x: -180, y: 0 },
+    { x: -150, y: -80 },
+    { x: -100, y: -150 },
+    { x:  -60, y: -210 },   // first big peak
+    { x:  -10, y: -180 },
+    { x:   30, y: -240 },   // tallest peak (Timp's iconic profile)
+    { x:   80, y: -200 },
+    { x:  130, y: -160 },
+    { x:  170, y: -100 },
+    { x:  200, y: 0 },
+  ];
+  // Body (rocky purple-grey)
+  const body = ctx.createLinearGradient(0, -240, 0, 0);
+  body.addColorStop(0, '#8a96b0');
+  body.addColorStop(0.55, '#5b6a86');
+  body.addColorStop(1, '#3d4a64');
+  ctx.fillStyle = body;
+  ctx.strokeStyle = '#2a3548';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(peaks[0].x, peaks[0].y);
+  for (const p of peaks) ctx.lineTo(p.x, p.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Snow caps (top portions)
+  ctx.fillStyle = '#fdfcf6';
+  ctx.beginPath();
+  ctx.moveTo(-100, -150);
+  ctx.lineTo(-80, -175);
+  ctx.lineTo(-65, -195);
+  ctx.lineTo(-60, -210);
+  ctx.lineTo(-40, -188);
+  ctx.lineTo(-25, -195);
+  ctx.lineTo(-15, -180);
+  ctx.lineTo(-22, -170);
+  ctx.lineTo(-50, -160);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, -195);
+  ctx.lineTo(15, -218);
+  ctx.lineTo(30, -240);
+  ctx.lineTo(48, -222);
+  ctx.lineTo(65, -218);
+  ctx.lineTo(78, -206);
+  ctx.lineTo(60, -195);
+  ctx.lineTo(35, -185);
+  ctx.lineTo(15, -180);
+  ctx.closePath();
+  ctx.fill();
+  // Tree line at base
+  ctx.fillStyle = '#2f5a22';
+  for (let tx = -190; tx <= 190; tx += 18) {
+    ctx.beginPath();
+    ctx.moveTo(tx - 5, 0);
+    ctx.lineTo(tx, -14 - Math.random() * 3);
+    ctx.lineTo(tx + 5, 0);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Pioneer handcart — large wagon wheels, long bed, pioneers pulling from a T-handle.
+function drawPioneerHandcarts(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  // Soft prairie shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath();
+  ctx.ellipse(10, -2, 130, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // === Cart bed (long wooden box riding above the axle) ===
+  // Bed sits high enough that the wheels stick out below it.
+  const bedTop = -64, bedBot = -34, bedL = -78, bedR = 22;
+  ctx.fillStyle = '#9a6438';
+  ctx.strokeStyle = '#2a1505';
+  ctx.lineWidth = 1.6;
+  ctx.fillRect(bedL, bedTop, bedR - bedL, bedBot - bedTop);
+  ctx.strokeRect(bedL, bedTop, bedR - bedL, bedBot - bedTop);
+  // Vertical plank lines on the side
+  ctx.strokeStyle = '#5a3818';
+  ctx.lineWidth = 0.9;
+  for (let i = bedL + 10; i < bedR; i += 11) {
+    ctx.beginPath(); ctx.moveTo(i, bedTop); ctx.lineTo(i, bedBot); ctx.stroke();
+  }
+  // Iron corner brackets
+  ctx.fillStyle = '#3a3028';
+  ctx.fillRect(bedL - 1, bedTop - 1, 6, 5);
+  ctx.fillRect(bedR - 5, bedTop - 1, 6, 5);
+  ctx.fillRect(bedL - 1, bedBot - 4, 6, 5);
+  ctx.fillRect(bedR - 5, bedBot - 4, 6, 5);
+  // Canvas-covered load: rounded hump tied with rope
+  ctx.fillStyle = '#ece0bc';
+  ctx.beginPath();
+  ctx.moveTo(bedL + 4, bedTop);
+  ctx.quadraticCurveTo((bedL + bedR) / 2, bedTop - 28, bedR - 4, bedTop);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#9a8556';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Lashing rope criss-crossing the canvas
+  ctx.strokeStyle = '#7a5a32';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  for (let lx = bedL + 12; lx < bedR; lx += 14) {
+    ctx.moveTo(lx, bedTop);
+    ctx.lineTo(lx + 6, bedTop - 18);
+    ctx.lineTo(lx + 12, bedTop);
+  }
+  ctx.stroke();
+
+  // === Wheels — large wagon wheels (two visible, slight perspective offset) ===
+  drawHandcartWheel(ctx, -28, -28, 28);   // back wheel
+  drawHandcartWheel(ctx,  -2, -32, 32);   // front wheel (slightly larger / lower / closer)
+  // Axle hint between hubs
+  ctx.strokeStyle = '#3a3028';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-28, -28);
+  ctx.lineTo(-2, -32);
+  ctx.stroke();
+
+  // === Pulling tongue (long pole forward to T-handle) ===
+  ctx.strokeStyle = '#5a3818';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(bedR - 4, bedBot - 4);
+  ctx.lineTo(96, -38);
+  ctx.stroke();
+  // Iron clamp where tongue meets bed
+  ctx.fillStyle = '#3a3028';
+  ctx.fillRect(bedR - 6, bedBot - 8, 6, 8);
+  // T-handle cross-bar at the front of the tongue
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(96, -50);
+  ctx.lineTo(96, -22);
+  ctx.stroke();
+  // Handle grips (small bulges at the ends)
+  ctx.fillStyle = '#4a2c10';
+  ctx.beginPath(); ctx.arc(96, -52, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(96, -20, 3.5, 0, Math.PI * 2); ctx.fill();
+
+  // === Pioneer figures pulling from the T-handle ===
+  // Father (taller, in front)
+  drawPioneerFigure(ctx, 122, 0, 30, '#3a2410', '#3a2410', false);
+  // Mother (long dress + bonnet)
+  drawPioneerFigure(ctx, 108, 0, 28, '#5a3a26', '#e8d8b0', true);
+  // Child (smaller)
+  drawPioneerFigure(ctx, 138, 0, 20, '#4a3024', '#4a3024', false);
+
+  ctx.restore();
+}
+
+function drawHandcartWheel(ctx, cx, cy, r) {
+  // Wood rim
+  ctx.fillStyle = '#7a4a20';
+  ctx.strokeStyle = '#2a1505';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // Inner gap (sky/background showing through)
+  ctx.fillStyle = 'rgba(180, 200, 220, 0.4)';
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.78, 0, Math.PI * 2); ctx.fill();
+  // Spokes (8 wooden spokes)
+  ctx.strokeStyle = '#5a3818';
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * (r * 0.18), cy + Math.sin(a) * (r * 0.18));
+    ctx.lineTo(cx + Math.cos(a) * (r * 0.82), cy + Math.sin(a) * (r * 0.82));
+    ctx.stroke();
+  }
+  // Hub
+  ctx.fillStyle = '#3a2410';
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.18, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#1a0a00';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Iron rim (dark band around outside)
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, Math.PI * 2); ctx.stroke();
+}
+
+function drawPioneerFigure(ctx, x, footY, height, bodyColor, headwearColor, bonnet) {
+  const headR = Math.max(4, height * 0.18);
+  const headY = footY - height + headR;
+  // Body — tapered (narrower at shoulders, wider at hem for dress)
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  if (bonnet) {
+    // Long dress shape
+    ctx.moveTo(x - 5, headY + headR);
+    ctx.lineTo(x - 9, footY - 2);
+    ctx.lineTo(x + 9, footY - 2);
+    ctx.lineTo(x + 5, headY + headR);
+  } else {
+    // Trousers and shirt
+    ctx.moveTo(x - 5, headY + headR);
+    ctx.lineTo(x - 6, footY - 14);
+    ctx.lineTo(x + 6, footY - 14);
+    ctx.lineTo(x + 5, headY + headR);
+  }
+  ctx.closePath();
+  ctx.fill();
+  // Trousers/legs (only visible if not in dress)
+  if (!bonnet) {
+    ctx.strokeStyle = bodyColor;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, footY - 14);
+    ctx.lineTo(x - 4, footY - 1);
+    ctx.moveTo(x + 3, footY - 14);
+    ctx.lineTo(x + 5, footY - 1);
+    ctx.stroke();
+  }
+  // Head (skin-tone)
+  ctx.fillStyle = '#e6c8a0';
+  ctx.beginPath(); ctx.arc(x, headY, headR, 0, Math.PI * 2); ctx.fill();
+  // Hat or bonnet
+  ctx.fillStyle = headwearColor;
+  if (bonnet) {
+    // Bonnet — covers most of head with brim sticking forward
+    ctx.beginPath();
+    ctx.ellipse(x - 1, headY - 1, headR + 1, headR * 0.95, 0, Math.PI * 0.95, Math.PI * 2.05);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + 2, headY, headR * 1.4, headR * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Wide-brim hat
+    ctx.beginPath();
+    ctx.ellipse(x, headY - headR * 0.5, headR * 1.2, headR * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x, headY - headR * 0.7, headR * 0.7, headR * 0.5, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+  }
+  // Arms reaching back/down to the T-handle (which is to the left)
+  ctx.strokeStyle = bodyColor;
+  ctx.lineWidth = Math.max(2.5, height * 0.1);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - 4, headY + headR + 4);
+  ctx.lineTo(x - 18, headY + headR + 12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 4, headY + headR + 4);
+  ctx.lineTo(x - 14, headY + headR + 16);
+  ctx.stroke();
+}
+
+// The Mayflower — small Pilgrim ship with billowing sails
+function drawMayflower(ctx, x, y, t = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  // Hull (curved wooden body)
+  const hull = ctx.createLinearGradient(0, -10, 0, 30);
+  hull.addColorStop(0, '#8a5a2a');
+  hull.addColorStop(1, '#3a1f0a');
+  ctx.fillStyle = hull;
+  ctx.strokeStyle = '#2a1505';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(-95, -8);
+  ctx.lineTo(80, -8);
+  ctx.quadraticCurveTo(108, 8, 70, 28);
+  ctx.lineTo(-78, 28);
+  ctx.quadraticCurveTo(-118, 12, -95, -8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Stripes/planks on hull
+  ctx.strokeStyle = 'rgba(40, 20, 5, 0.45)';
+  ctx.lineWidth = 0.8;
+  for (let py = -2; py < 26; py += 6) {
+    ctx.beginPath();
+    ctx.moveTo(-92 + py * 0.2, py);
+    ctx.lineTo(78 - py * 0.1, py);
+    ctx.stroke();
+  }
+  // Aft castle (raised stern at rear/left)
+  ctx.fillStyle = '#7a4a20';
+  ctx.fillRect(-100, -32, 32, 28);
+  ctx.strokeStyle = '#2a1505';
+  ctx.strokeRect(-100, -32, 32, 28);
+  // Tiny stern windows
+  ctx.fillStyle = '#f0e0a0';
+  ctx.fillRect(-96, -26, 5, 7);
+  ctx.fillRect(-88, -26, 5, 7);
+  ctx.fillRect(-80, -26, 5, 7);
+  // Forecastle (raised bow, small)
+  ctx.fillStyle = '#7a4a20';
+  ctx.fillRect(58, -22, 22, 18);
+  ctx.strokeRect(58, -22, 22, 18);
+  // === Three masts with sails ===
+  const sway = Math.sin(t * 1.3) * 2;
+  ctx.strokeStyle = '#3a2410';
+  ctx.lineWidth = 2.5;
+  // Masts
+  for (const mx of [-50, 0, 50]) {
+    ctx.beginPath();
+    ctx.moveTo(mx, -8);
+    ctx.lineTo(mx + sway * 0.5, -110);
+    ctx.stroke();
+  }
+  // Sails (white, billowing)
+  ctx.fillStyle = '#fdfcf2';
+  ctx.strokeStyle = '#a89878';
+  ctx.lineWidth = 1;
+  // Main mast (center, biggest)
+  ctx.beginPath();
+  ctx.moveTo(-32, -32);
+  ctx.quadraticCurveTo(0 + sway, -22, 32, -32);
+  ctx.lineTo(34, -82);
+  ctx.quadraticCurveTo(0 + sway * 0.7, -72, -34, -82);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Top sail center
+  ctx.beginPath();
+  ctx.moveTo(-22, -86);
+  ctx.quadraticCurveTo(0 + sway * 0.5, -78, 22, -86);
+  ctx.lineTo(20, -108);
+  ctx.lineTo(-20, -108);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Fore mast (right)
+  ctx.beginPath();
+  ctx.moveTo(28, -22);
+  ctx.quadraticCurveTo(50 + sway * 0.6, -14, 70, -22);
+  ctx.lineTo(70, -68);
+  ctx.quadraticCurveTo(50 + sway * 0.5, -58, 30, -68);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Mizzen (left/aft)
+  ctx.beginPath();
+  ctx.moveTo(-72, -32);
+  ctx.quadraticCurveTo(-50 + sway * 0.4, -24, -28, -32);
+  ctx.lineTo(-28, -72);
+  ctx.quadraticCurveTo(-50 + sway * 0.3, -62, -72, -72);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Flag on top of main mast
+  ctx.fillStyle = '#cc4444';
+  ctx.beginPath();
+  ctx.moveTo(0 + sway, -110);
+  ctx.lineTo(20 + sway, -114);
+  ctx.lineTo(0 + sway, -118);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function trebDraw(ctx, dt) {
+  const g = trebGeom();
+  const inFlight = treb.phase === 'flying' || treb.phase === 'landed';
+
+  // ===== Ground band — grass left of shoreline, ocean past it =====
+  // Compute the shoreline screen X based on current camera (treb.fx).
+  const shorelineScreenX = inFlight
+    ? trebWorldToScreenX(OCEAN_START_FT)
+    : W + 1000; // pre-flight: shoreline is way off-screen → all grass
+  const grassEndX = Math.max(0, Math.min(W, shorelineScreenX));
+  // --- Grass portion ---
+  if (grassEndX > 0) {
+    const grassGrad = ctx.createLinearGradient(0, g.groundY, 0, H);
+    grassGrad.addColorStop(0, '#7ab83a');
+    grassGrad.addColorStop(1, '#3a6618');
+    ctx.fillStyle = grassGrad;
+    ctx.fillRect(0, g.groundY, grassEndX, H - g.groundY);
+    // grass blade flecks
+    ctx.fillStyle = 'rgba(150, 200, 90, 0.5)';
+    for (let i = 0; i < 60; i++) {
+      const x = (i * 137.5 + (inFlight ? -treb.fx * TREB.PX_PER_FT * 0.5 : 0)) % W;
+      const xx = (x + W) % W;
+      if (xx < grassEndX) ctx.fillRect(xx, g.groundY + (i % 7) * 4, 2, 5);
+    }
+  }
+  // --- Ocean portion (right of shoreline) ---
+  if (grassEndX < W) {
+    const oceanGrad = ctx.createLinearGradient(0, g.groundY, 0, H);
+    oceanGrad.addColorStop(0, '#4ea0c8');
+    oceanGrad.addColorStop(0.6, '#28608c');
+    oceanGrad.addColorStop(1, '#143850');
+    ctx.fillStyle = oceanGrad;
+    ctx.fillRect(grassEndX, g.groundY, W - grassEndX, H - g.groundY);
+    // Animated wave lines
+    const t = (performance.now() / 1000);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 1.4;
+    for (let row = 0; row < 8; row++) {
+      const wy = g.groundY + 12 + row * 14;
+      ctx.beginPath();
+      for (let wx = grassEndX; wx <= W; wx += 8) {
+        const phase = (wx - treb.fx * TREB.PX_PER_FT) * 0.012 + t * (1.4 + row * 0.15);
+        const dy = Math.sin(phase) * (1.6 + row * 0.18);
+        if (wx === grassEndX) ctx.moveTo(wx, wy + dy);
+        else ctx.lineTo(wx, wy + dy);
+      }
+      ctx.stroke();
+    }
+    // Sandy beach strip at the shoreline
+    if (grassEndX > 0 && grassEndX < W) {
+      const beachW = 30;
+      const sandGrad = ctx.createLinearGradient(grassEndX - beachW, 0, grassEndX + beachW, 0);
+      sandGrad.addColorStop(0, 'rgba(218, 196, 142, 0)');
+      sandGrad.addColorStop(0.5, 'rgba(232, 210, 156, 0.85)');
+      sandGrad.addColorStop(1, 'rgba(218, 196, 142, 0)');
+      ctx.fillStyle = sandGrad;
+      ctx.fillRect(grassEndX - beachW, g.groundY, beachW * 2, 14);
+    }
+  }
+
+  if (inFlight) {
+    trebDrawFlight(ctx, g);
+  } else if (treb.phase === 'broken') {
+    trebDrawBroken(ctx, g);
+  } else {
+    trebDrawTrebuchet(ctx, g);
+  }
+
+  // Update + draw splats (eyeball pieces from the latest landing).
+  // We call this here because the main loop's splat handler is skipped
+  // while trebuchet mode owns the screen.
+  for (let i = splats.length - 1; i >= 0; i--) {
+    splats[i].update(dt, PLANETS[state.planet]);
+    splats[i].draw(ctx);
+    if (splats[i].done) splats.splice(i, 1);
+  }
+
+  // ===== HUD =====
+  trebDrawHUD(ctx, g);
+}
+
+// === Broken trebuchet — easter egg when charge >= 249% ===
+// Pieces are spawned at the moment of the snap and fall under gravity.
+function initBrokenPieces() {
+  const g = trebGeom();
+  const theta = trebArmAngle(1, 0); // fully cocked arm angle
+  const cosT = Math.cos(theta), sinT = Math.sin(theta);
+  // Long-arm break point (~55% out from pivot toward sling tip)
+  const breakRatio = 0.55;
+  const longBreakX = g.pivotX + cosT * g.longLen * breakRatio;
+  const longBreakY = g.pivotY - sinT * g.longLen * breakRatio;
+  const longTipX = g.pivotX + cosT * g.longLen;
+  const longTipY = g.pivotY - sinT * g.longLen;
+  // Short-arm tip (where the drum hangs)
+  const shortTipX = g.pivotX - cosT * g.shortLen;
+  const shortTipY = g.pivotY + sinT * g.shortLen;
+  // Drum hangs ~46 below the short-arm tip
+  const drumX = shortTipX;
+  const drumY = shortTipY + 46;
+  treb.pieces = [
+    // The free long-arm half with sling — flies off, tumbles
+    {
+      type: 'longHalf',
+      cx: (longBreakX + longTipX) / 2,
+      cy: (longBreakY + longTipY) / 2,
+      vx: -120 + Math.random() * 40,           // pushed away from pivot (toward back-left)
+      vy: -180 - Math.random() * 60,           // popped upward by the snap
+      rot: theta,
+      rotVel: -3 - Math.random() * 2,
+      length: g.longLen * (1 - breakRatio),
+      atRest: false,
+      onRest: 'horizontal',
+    },
+    // Short-arm + drum still attached. Stays anchored to the pivot but swings
+    // freely under the heavy drum's weight (damped pendulum).
+    {
+      type: 'pivotPiece',
+      theta: theta,                           // current arm angle
+      thetaVel: 0,                            // angular velocity
+      stubLen: g.longLen * 0.35,              // small splintered stub on the long side
+      shortLen: g.shortLen,
+      drumHang: 46,
+      atRest: false,
+    },
+    // The eyeball, popped out of the sling
+    {
+      type: 'eyeball',
+      cx: longTipX + 10,
+      cy: g.groundY - 36,
+      vx: 60 + Math.random() * 60,
+      vy: -260 - Math.random() * 60,
+      rot: 0,
+      rotVel: 6 + Math.random() * 4,
+      atRest: false,
+      onRest: 'tipped',
+    },
+    // A few concrete chunks blown out of the drum
+    ...Array.from({ length: 4 }, () => ({
+      type: 'concrete',
+      cx: drumX + (Math.random() - 0.5) * 20,
+      cy: drumY - 20,
+      vx: (Math.random() - 0.5) * 500,
+      vy: -300 - Math.random() * 200,
+      rot: Math.random() * Math.PI * 2,
+      rotVel: (Math.random() - 0.5) * 14,
+      size: 6 + Math.random() * 6,
+      atRest: false,
+    })),
+    // A small splintered wood shard or two flying off the snap
+    ...Array.from({ length: 3 }, () => ({
+      type: 'shard',
+      cx: longBreakX + (Math.random() - 0.5) * 12,
+      cy: longBreakY + (Math.random() - 0.5) * 12,
+      vx: (Math.random() - 0.5) * 350,
+      vy: -180 - Math.random() * 200,
+      rot: Math.random() * Math.PI * 2,
+      rotVel: (Math.random() - 0.5) * 16,
+      length: 14 + Math.random() * 16,
+      atRest: false,
+    })),
+  ];
+}
+
+function updateBrokenPieces(dt) {
+  const g = trebGeom();
+  const groundY = g.groundY - 6;
+  const GRAV = 1100;     // px/s²
+  const DRAG = 0.992;    // air drag per frame at 60fps
+  for (const p of treb.pieces) {
+    if (p.atRest) continue;
+    if (p.type === 'pivotPiece') {
+      // Damped pendulum settling at theta = π/2 (long arm vertical → drum at bottom)
+      const target = Math.PI / 2;
+      let diff = p.theta - target;
+      while (diff > Math.PI)  diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      // Restoring + damping
+      p.thetaVel += -16 * Math.sin(diff) * dt;
+      p.thetaVel *= Math.pow(0.965, dt * 60);
+      p.theta += p.thetaVel * dt;
+      // Settled when motion is tiny
+      if (Math.abs(diff) < 0.04 && Math.abs(p.thetaVel) < 0.05) {
+        p.theta = target;
+        p.thetaVel = 0;
+        p.atRest = true;
+      }
+      continue;
+    }
+    // Free-fall pieces
+    p.vy += GRAV * dt;
+    p.vx *= Math.pow(DRAG, dt * 60);
+    p.cx += p.vx * dt;
+    p.cy += p.vy * dt;
+    p.rot += p.rotVel * dt;
+    if (p.cy >= groundY) {
+      p.cy = groundY;
+      // Bounce
+      if (Math.abs(p.vy) > 60) {
+        p.vy = -p.vy * 0.32;
+        p.vx *= 0.55;
+        p.rotVel *= 0.5;
+      } else {
+        p.vy = 0;
+        p.vx *= 0.6;
+        p.rotVel *= 0.7;
+        if (Math.abs(p.vx) < 8 && Math.abs(p.rotVel) < 0.4) {
+          p.vx = 0;
+          p.rotVel = 0;
+          p.atRest = true;
+          // Snap rotation to a natural resting angle
+          if (p.onRest === 'horizontal') {
+            // Round to nearest π so the beam lies flat
+            p.rot = Math.round(p.rot / Math.PI) * Math.PI;
+          } else if (p.onRest === 'tipped') {
+            // Eyeball lying on its side
+            p.rot = Math.PI / 2;
+          }
+        }
+      }
+    }
+  }
+}
+
+function trebDrawBroken(ctx, g) {
+  const baseY = g.groundY;
+  const elapsed = (performance.now() - treb.brokenAt) / 1000;
+
+  // === The A-frame is left standing (load suddenly gone) — render normally ===
+  // Sled
+  ctx.fillStyle = '#7a4f1d';
+  ctx.fillRect(g.pivotX - g.baseHalf - 20, baseY - 6, g.baseHalf * 2 + 40, 8);
+  // Triangle leg pairs — same draw as the working trebuchet but no arm/drum
+  const drawLegPair = (offsetX) => {
+    ctx.strokeStyle = '#7a4f1d';
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX - g.baseHalf + offsetX, baseY);
+    ctx.lineTo(g.pivotX + offsetX, g.pivotY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX + g.baseHalf + offsetX, baseY);
+    ctx.lineTo(g.pivotX + offsetX, g.pivotY);
+    ctx.stroke();
+    ctx.lineWidth = 5;
+    for (let i = 1; i <= 2; i++) {
+      const t = i / 3;
+      const lx = g.pivotX - g.baseHalf + (g.baseHalf) * t + offsetX;
+      const rx = g.pivotX + g.baseHalf - (g.baseHalf) * t + offsetX;
+      const ly = baseY - (baseY - g.pivotY) * t;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly); ctx.lineTo(rx, ly); ctx.stroke();
+    }
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX - g.baseHalf * 0.7 + offsetX, baseY - (baseY - g.pivotY) * 0.25);
+    ctx.lineTo(g.pivotX + g.baseHalf * 0.7 + offsetX, baseY - (baseY - g.pivotY) * 0.75);
+    ctx.stroke();
+  };
+  drawLegPair(-12);
+  drawLegPair(12);
+  // Pivot peg
+  ctx.fillStyle = '#bbb';
+  ctx.beginPath();
+  ctx.arc(g.pivotX, g.pivotY, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // === Dust cloud right at the snap point (expands & fades, peaks ~0.5s) ===
+  const dustAlpha = Math.max(0, 0.55 - elapsed * 0.5);
+  const dustR = 50 + elapsed * 220;
+  if (dustAlpha > 0.02) {
+    const dust = ctx.createRadialGradient(g.pivotX, g.pivotY, 4, g.pivotX, g.pivotY, dustR);
+    dust.addColorStop(0, `rgba(200, 180, 150, ${dustAlpha})`);
+    dust.addColorStop(1, 'rgba(200, 180, 150, 0)');
+    ctx.fillStyle = dust;
+    ctx.fillRect(g.pivotX - dustR - 20, g.pivotY - dustR - 20, (dustR + 20) * 2, (dustR + 20) * 2);
+  }
+
+  // === Animated pieces ===
+  for (const p of treb.pieces) {
+    if (p.type === 'pivotPiece') {
+      drawPivotPiece(ctx, g, p);
+    } else if (p.type === 'longHalf') {
+      drawLongHalfPiece(ctx, p);
+    } else if (p.type === 'eyeball') {
+      ctx.save();
+      ctx.translate(p.cx, p.cy);
+      ctx.rotate(p.rot);
+      drawBall(ctx, 32, '#4d96ff', '#4d96ff', 'eyeball', Math.PI / 2, 0, 7, 0);
+      ctx.restore();
+    } else if (p.type === 'concrete') {
+      ctx.save();
+      ctx.translate(p.cx, p.cy);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = '#a8a39a';
+      ctx.strokeStyle = '#3a3530';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-p.size, -p.size * 0.6);
+      ctx.lineTo(p.size * 0.7, -p.size);
+      ctx.lineTo(p.size, p.size * 0.4);
+      ctx.lineTo(p.size * 0.2, p.size);
+      ctx.lineTo(-p.size * 0.8, p.size * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // pebble fleck
+      ctx.fillStyle = 'rgba(40, 38, 35, 0.7)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else if (p.type === 'shard') {
+      ctx.save();
+      ctx.translate(p.cx, p.cy);
+      ctx.rotate(p.rot);
+      ctx.strokeStyle = '#d8c598';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-p.length / 2, 0);
+      ctx.lineTo(p.length / 2, 0);
+      ctx.stroke();
+      ctx.strokeStyle = '#7a5a32';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-p.length / 2, 0);
+      ctx.lineTo(p.length / 2, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // === HUD message — fades in after the snap so the action reads first ===
+  const msgAlpha = Math.min(1, Math.max(0, (elapsed - 0.7) * 1.6));
+  if (msgAlpha > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = msgAlpha;
+    ctx.font = '900 78px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(20,14,6,0.55)';
+    roundRect(ctx, W / 2 - 380, H / 2 - 110, 760, 170, 22); ctx.fill();
+    ctx.fillStyle = '#ff7a5a';
+    ctx.fillText('IT BROKE!', W / 2, H / 2 - 36);
+    ctx.font = '700 24px system-ui';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('You sang too loud — the trebuchet snapped clean in half.', W / 2, H / 2 + 18);
+    ctx.font = '600 18px system-ui';
+    ctx.fillStyle = '#d8d4c0';
+    ctx.fillText('Maybe save some lung capacity for next time.', W / 2, H / 2 + 48);
+    ctx.restore();
+  }
+}
+
+// === Helpers for animated wreckage pieces ===
+
+// The free long-arm half (with sling rope ends) tumbling through the air.
+function drawLongHalfPiece(ctx, p) {
+  ctx.save();
+  ctx.translate(p.cx, p.cy);
+  ctx.rotate(p.rot);
+  // Beam
+  ctx.strokeStyle = '#d8c598';
+  ctx.lineWidth = 11;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-p.length / 2, 0);
+  ctx.lineTo(p.length / 2, 0);
+  ctx.stroke();
+  ctx.strokeStyle = '#8a6a3e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-p.length / 2, 0);
+  ctx.lineTo(p.length / 2, 0);
+  ctx.stroke();
+  // Splintered end at the break (left)
+  ctx.fillStyle = '#a8895a';
+  ctx.beginPath();
+  ctx.moveTo(-p.length / 2, -6);
+  ctx.lineTo(-p.length / 2 - 10, -2);
+  ctx.lineTo(-p.length / 2 - 3, 1);
+  ctx.lineTo(-p.length / 2 - 12, 4);
+  ctx.lineTo(-p.length / 2 - 2, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#5a3818';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Sling rope ends dangling from the tip (right)
+  ctx.strokeStyle = '#cc4444';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(p.length / 2 - 4, 0);
+  ctx.lineTo(p.length / 2 + 8, 18);
+  ctx.moveTo(p.length / 2 - 2, 0);
+  ctx.lineTo(p.length / 2 + 14, 22);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// The pivot piece — short arm + drum still attached, swinging on the pivot peg.
+function drawPivotPiece(ctx, g, p) {
+  const cosT = Math.cos(p.theta), sinT = Math.sin(p.theta);
+  const stubX = g.pivotX + cosT * p.stubLen;
+  const stubY = g.pivotY - sinT * p.stubLen;
+  const shortX = g.pivotX - cosT * p.shortLen;
+  const shortY = g.pivotY + sinT * p.shortLen;
+
+  // Beam from stub end through pivot to short tip
+  ctx.strokeStyle = '#d8c598';
+  ctx.lineWidth = 11;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(stubX, stubY);
+  ctx.lineTo(shortX, shortY);
+  ctx.stroke();
+  ctx.strokeStyle = '#8a6a3e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(stubX, stubY);
+  ctx.lineTo(shortX, shortY);
+  ctx.stroke();
+
+  // Splintered end on the long-side stub
+  ctx.save();
+  ctx.translate(stubX, stubY);
+  ctx.rotate(p.theta);
+  ctx.fillStyle = '#a8895a';
+  ctx.beginPath();
+  ctx.moveTo(0, -6);
+  ctx.lineTo(10, -2);
+  ctx.lineTo(3, 1);
+  ctx.lineTo(12, 4);
+  ctx.lineTo(2, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#5a3818';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+
+  // Chain from short-arm tip to drum (drum hangs straight down due to gravity)
+  const drumCx = shortX;
+  const drumCy = shortY + p.drumHang;
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(shortX, shortY);
+  ctx.lineTo(drumCx, drumCy);
+  ctx.stroke();
+
+  // Steel drum (compact version of the cocked-state drum)
+  drawSteelDrumAt(ctx, drumCx, drumCy);
+}
+
+// Compact steel drum render used by the pivot piece.
+function drawSteelDrumAt(ctx, cx, cy) {
+  const bw = 34, bh = 60;
+  const top = cy - 14, bot = top + bh;
+  const bodyGrad = ctx.createLinearGradient(cx - bw, 0, cx + bw, 0);
+  bodyGrad.addColorStop(0, '#1f1f22');
+  bodyGrad.addColorStop(0.45, '#5a5a5e');
+  bodyGrad.addColorStop(0.55, '#6d6d72');
+  bodyGrad.addColorStop(1, '#15151a');
+  ctx.fillStyle = bodyGrad;
+  ctx.strokeStyle = '#0e0e12';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(cx - bw, top);
+  ctx.lineTo(cx - bw, bot - 2);
+  ctx.quadraticCurveTo(cx, bot + 4, cx + bw, bot - 2);
+  ctx.lineTo(cx + bw, top);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  // Hoops
+  ctx.strokeStyle = '#0a0a0e';
+  ctx.lineWidth = 4.5;
+  for (const ratio of [0.08, 0.18, 0.78, 0.92]) {
+    const hy = top + (bot - top) * ratio;
+    ctx.beginPath();
+    ctx.moveTo(cx - bw, hy);
+    ctx.lineTo(cx + bw, hy);
+    ctx.stroke();
+  }
+  // Concrete top
+  const concGrad = ctx.createLinearGradient(cx - bw, top, cx + bw, top);
+  concGrad.addColorStop(0, '#5a5550');
+  concGrad.addColorStop(0.5, '#a8a39a');
+  concGrad.addColorStop(1, '#403a35');
+  ctx.fillStyle = concGrad;
+  ctx.beginPath();
+  ctx.ellipse(cx, top, bw - 2, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#2a2520';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+}
+
+function trebDrawTrebuchet(ctx, g) {
+  // Wooden A-frame base — two cross legs + horizontal beams + base sled
+  const baseY = g.groundY;
+  ctx.strokeStyle = '#7a4f1d';
+  ctx.fillStyle   = '#a87034';
+  ctx.lineWidth   = 8;
+  ctx.lineCap     = 'round';
+  // Sled
+  ctx.fillStyle = '#7a4f1d';
+  ctx.fillRect(g.pivotX - g.baseHalf - 20, baseY - 6, g.baseHalf * 2 + 40, 8);
+  // Front and back triangle leg pairs (foreshortened)
+  const drawLegPair = (offsetX) => {
+    ctx.strokeStyle = '#7a4f1d';
+    ctx.lineWidth = 9;
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX - g.baseHalf + offsetX, baseY);
+    ctx.lineTo(g.pivotX + offsetX, g.pivotY);
+    ctx.stroke();
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX + g.baseHalf + offsetX, baseY);
+    ctx.lineTo(g.pivotX + offsetX, g.pivotY);
+    ctx.stroke();
+    // Cross-beams (two horizontals up the legs)
+    ctx.lineWidth = 5;
+    for (let i = 1; i <= 2; i++) {
+      const t = i / 3;
+      const lx = g.pivotX - g.baseHalf + (g.baseHalf) * t + offsetX;
+      const rx = g.pivotX + g.baseHalf - (g.baseHalf) * t + offsetX;
+      const y  = baseY - (baseY - g.pivotY) * t;
+      ctx.beginPath();
+      ctx.moveTo(lx, y); ctx.lineTo(rx, y); ctx.stroke();
+    }
+    // Diagonal cross-brace
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(g.pivotX - g.baseHalf * 0.7 + offsetX, baseY - (baseY - g.pivotY) * 0.25);
+    ctx.lineTo(g.pivotX + g.baseHalf * 0.7 + offsetX, baseY - (baseY - g.pivotY) * 0.75);
+    ctx.stroke();
+  };
+  drawLegPair(-12); // back legs (slightly behind)
+  drawLegPair(12);  // front legs
+
+  // Pivot peg
+  ctx.fillStyle = '#bbb';
+  ctx.beginPath();
+  ctx.arc(g.pivotX, g.pivotY, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ===== Arm =====
+  // 100% charge → fully cocked. Overcharge doesn't crank further visually,
+  // it just adds launch velocity.
+  const cock = Math.min(1, treb.charge);
+  const releaseT = treb.phase === 'releasing' ? treb.releaseT : 0;
+  const baseCock = treb.phase === 'releasing' ? 1 : cock;
+  const theta = trebArmAngle(baseCock, releaseT);
+
+  // Arm endpoints (long end forward at +theta, short end opposite)
+  const longX  = g.pivotX + Math.cos(theta) * g.longLen;
+  const longY  = g.pivotY - Math.sin(theta) * g.longLen;       // canvas y inverted
+  const shortX = g.pivotX - Math.cos(theta) * g.shortLen;
+  const shortY = g.pivotY + Math.sin(theta) * g.shortLen;
+
+  // Arm beam (tapered look — drawn as two strokes)
+  ctx.strokeStyle = '#d8c598';
+  ctx.lineWidth = 11;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(shortX, shortY);
+  ctx.lineTo(longX, longY);
+  ctx.stroke();
+  ctx.strokeStyle = '#8a6a3e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(shortX, shortY);
+  ctx.lineTo(longX, longY);
+  ctx.stroke();
+
+  // ===== Counterweight: steel drum full of concrete =====
+  const cwHangLen = 46;
+  const cwX = shortX;
+  const cwY = shortY + cwHangLen;
+  // Hanging chain
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(shortX, shortY);
+  ctx.lineTo(cwX, cwY);
+  ctx.stroke();
+  // === Steel drum body — straight cylinder, weathered/dirty ===
+  const bw = 34;   // half width
+  const bh = 60;   // total height
+  const top = cwY - 14;
+  const bot = top + bh;
+  // Body gradient: shadow → highlight → shadow (cylinder shading)
+  const bodyGrad = ctx.createLinearGradient(cwX - bw, 0, cwX + bw, 0);
+  bodyGrad.addColorStop(0, '#1f1f22');
+  bodyGrad.addColorStop(0.35, '#4d4d52');
+  bodyGrad.addColorStop(0.55, '#6d6d72');
+  bodyGrad.addColorStop(0.8, '#3a3a3e');
+  bodyGrad.addColorStop(1, '#15151a');
+  ctx.fillStyle = bodyGrad;
+  ctx.strokeStyle = '#0e0e12';
+  ctx.lineWidth = 1.4;
+  // Straight-sided drum with elliptical bottom curve (slightly rounded base)
+  ctx.beginPath();
+  ctx.moveTo(cwX - bw, top);
+  ctx.lineTo(cwX - bw, bot - 2);
+  ctx.quadraticCurveTo(cwX, bot + 4, cwX + bw, bot - 2);
+  ctx.lineTo(cwX + bw, top);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Two pairs of rolled-steel hoops (typical 55-gallon drum profile)
+  ctx.strokeStyle = '#0a0a0e';
+  ctx.lineWidth = 4.5;
+  const hoopRatios = [0.08, 0.18, 0.78, 0.92];
+  for (const ratio of hoopRatios) {
+    const hy = top + (bot - top) * ratio;
+    ctx.beginPath();
+    ctx.moveTo(cwX - bw, hy);
+    ctx.lineTo(cwX + bw, hy);
+    ctx.stroke();
+  }
+  // Hoop highlights
+  ctx.strokeStyle = 'rgba(220, 220, 220, 0.32)';
+  ctx.lineWidth = 1.2;
+  for (const ratio of hoopRatios) {
+    const hy = top + (bot - top) * ratio - 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cwX - bw * 0.78, hy);
+    ctx.lineTo(cwX - bw * 0.18, hy);
+    ctx.stroke();
+  }
+  // Rust streaks running down the body
+  ctx.strokeStyle = 'rgba(140, 70, 30, 0.5)';
+  ctx.lineWidth = 1.4;
+  const rustSpots = [-bw * 0.55, -bw * 0.1, bw * 0.3, bw * 0.65];
+  for (const px of rustSpots) {
+    ctx.beginPath();
+    ctx.moveTo(cwX + px, top + 12);
+    ctx.bezierCurveTo(
+      cwX + px - 2, top + 22,
+      cwX + px + 1, bot - 18,
+      cwX + px - 1, bot - 8
+    );
+    ctx.stroke();
+  }
+  // Soot/scorch smudges (drum has been around)
+  ctx.fillStyle = 'rgba(20, 18, 18, 0.55)';
+  ctx.beginPath();
+  ctx.ellipse(cwX - bw * 0.4, top + 24, 8, 14, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cwX + bw * 0.5, bot - 22, 6, 11, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // === Concrete inside the open top ===
+  const concreteGrad = ctx.createLinearGradient(cwX - bw, top, cwX + bw, top);
+  concreteGrad.addColorStop(0, '#5a5550');
+  concreteGrad.addColorStop(0.5, '#a8a39a');
+  concreteGrad.addColorStop(1, '#403a35');
+  ctx.fillStyle = concreteGrad;
+  ctx.beginPath();
+  ctx.ellipse(cwX, top, bw - 2, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#2a2520';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Aggregate / pebble texture in the concrete
+  ctx.fillStyle = 'rgba(30, 28, 25, 0.65)';
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const rr = (bw - 4) * Math.sqrt(Math.random());
+    ctx.beginPath();
+    ctx.arc(cwX + Math.cos(a) * rr, top + Math.sin(a) * 4.2, 0.7 + Math.random() * 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(230, 224, 216, 0.45)';
+  for (let i = 0; i < 10; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const rr = (bw - 4) * Math.sqrt(Math.random());
+    ctx.beginPath();
+    ctx.arc(cwX + Math.cos(a) * rr, top + Math.sin(a) * 4.2, 0.4 + Math.random() * 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Inner shadow at the top rim (so the concrete reads as set INSIDE the drum)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.ellipse(cwX, top - 0.5, bw - 2, 6.5, 0, Math.PI, Math.PI * 2);
+  ctx.stroke();
+
+  // ===== Sling + eyeball on long end =====
+  // Sling = two ropes from the long-arm tip to a pouch holding the eyeball.
+  // Cocking phase: pouch hangs straight down from the tip, but never
+  // sinks below the ground line.
+  // Releasing: pouch trails behind the tip and accelerates around with the arm,
+  // staying tangent to the swing.
+  const slingLen = g.longLen * 0.45;
+  let pouchX, pouchY;
+  if (treb.phase === 'releasing') {
+    // Arm whips CW (theta decreasing). The sling lags behind in the swing,
+    // so its angle is HIGHER than the arm (theta + lag). Lag shrinks as the
+    // whip approaches release.
+    const lag = (1 - treb.releaseT) * (Math.PI / 3);
+    const trailTheta = theta + lag;
+    pouchX = g.pivotX + Math.cos(trailTheta) * (g.longLen + slingLen);
+    pouchY = g.pivotY - Math.sin(trailTheta) * (g.longLen + slingLen);
+  } else {
+    // Hang straight down from the tip, clamped to ground level.
+    pouchX = longX;
+    pouchY = Math.min(longY + slingLen, g.groundY - 14);
+  }
+
+  // Sling ropes
+  ctx.strokeStyle = '#cc4444';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(longX - 4, longY);
+  ctx.lineTo(pouchX - 6, pouchY - 4);
+  ctx.moveTo(longX + 4, longY);
+  ctx.lineTo(pouchX + 6, pouchY - 4);
+  ctx.stroke();
+
+  // Eyeball in the sling pouch
+  const eyeR = 38;
+  ctx.save();
+  ctx.translate(pouchX, pouchY);
+  ctx.rotate(theta * 0.4);
+  drawBall(ctx, eyeR, '#4d96ff', '#4d96ff', 'eyeball', 0, 0, 7, 0);
+  ctx.restore();
+
+}
+
+function trebDrawFlight(ctx, g) {
+  const eye = trebFlightScreenPos();
+
+  // Distant horizon line (parallax — moves slowly with camera)
+  ctx.strokeStyle = 'rgba(120, 90, 60, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, g.groundY - 1);
+  ctx.lineTo(W, g.groundY - 1);
+  ctx.stroke();
+
+  // Distance ticks on the ground — small marks every 50 ft, bigger with
+  // labels every 100 ft.
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.5;
+  ctx.font = '700 13px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let f = 50; f <= 3000; f += 50) {
+    const x = trebWorldToScreenX(f);
+    if (x < -40 || x > W + 40) continue;
+    const big = f % 100 === 0;
+    ctx.beginPath();
+    ctx.moveTo(x, g.groundY);
+    ctx.lineTo(x, g.groundY + (big ? 14 : 7));
+    ctx.stroke();
+    if (big) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(`${f} ft`, x, g.groundY + 18);
+    }
+  }
+
+  // LDS landmark silhouettes the eyeball flies over.
+  // The Mayflower follows treb.shipFt while sailing so the ship moves westward.
+  const tNow = performance.now() / 1000;
+  for (const lm of TREB_LANDMARKS) {
+    const ft = (lm.water && treb.sailing) ? treb.shipFt : lm.ft;
+    const x = trebWorldToScreenX(ft);
+    if (x < -260 || x > W + 260) continue;
+    // Ships float on the water (slight Y offset); land landmarks sit on the ground.
+    const drawY = lm.water ? g.groundY - 6 : g.groundY;
+    lm.draw(ctx, x, drawY, tNow);
+    // Tiny label tucked under the landmark
+    ctx.font = '700 12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(lm.label, x, g.groundY + 38);
+  }
+
+  // Shadow under the eyeball on the ground
+  if (treb.phase === 'flying') {
+    const groundShadowAlpha = Math.max(0.05, 0.45 - (g.groundY - eye.y) / 800);
+    ctx.fillStyle = `rgba(0,0,0,${groundShadowAlpha})`;
+    ctx.beginPath();
+    ctx.ellipse(eye.x, g.groundY - 2, 78, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // The flying eyeball itself (rotates) — only drawn while in flight; once
+  // it lands, the splat replaces the visible eyeball.
+  if (treb.phase === 'flying') {
+    ctx.save();
+    ctx.translate(eye.x, eye.y);
+    ctx.rotate(treb.rotation);
+    drawBall(ctx, 76, '#4d96ff', '#4d96ff', 'eyeball', 0, 0, 7, 0);
+    ctx.restore();
+  }
+  // While sailing, draw a small eyeball on the deck of the ship (upright, no rotation).
+  if (treb.phase === 'landed' && treb.sailing) {
+    const sx = trebWorldToScreenX(treb.shipFt);
+    const sy = g.groundY - 56; // sit on the deck, just below the masts
+    ctx.save();
+    ctx.translate(sx, sy);
+    drawBall(ctx, 22, '#4d96ff', '#4d96ff', 'eyeball', 0, 0, 7, 0);
+    ctx.restore();
+  }
+
+  // Trail
+  ctx.strokeStyle = 'rgba(220,220,255,0.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 1; i <= 18; i++) {
+    const t = i * 0.05;
+    const tx = eye.x - treb.vx * TREB.PX_PER_FT * t;
+    const ty = eye.y + treb.vy * TREB.PX_PER_FT * t + 0.5 * TREB.G_FT * TREB.PX_PER_FT * t * t;
+    if (i === 1) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+  }
+  ctx.stroke();
+}
+
+function trebDrawHUD(ctx, g) {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  // Charge meter — bottom-center so it doesn't fight with the volume meter
+  // or finish button up top.
+  if (treb.phase === 'cocking') {
+    const w = Math.min(620, W * 0.5);
+    const h = 26;
+    const x = W / 2 - w / 2;
+    const y = H - 90;
+    // Label above the bar, centered
+    ctx.fillStyle = '#fff';
+    ctx.font = '800 20px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`Sing to charge!  ${Math.round(treb.charge * 100)}%`, W / 2, y - 8);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    // Bar background
+    ctx.fillStyle = 'rgba(20, 14, 6, 0.55)';
+    roundRect(ctx, x - 8, y - 8, w + 16, h + 16, 14); ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+    roundRect(ctx, x, y, w, h, 12); ctx.fill();
+    // Fill
+    const fillW = w * Math.min(1, treb.charge / 1.0);
+    const cg = ctx.createLinearGradient(x, 0, x + w, 0);
+    cg.addColorStop(0, '#6bcf7f');
+    cg.addColorStop(0.6, '#ffd93d');
+    cg.addColorStop(1, '#ff6b6b');
+    ctx.fillStyle = cg;
+    roundRect(ctx, x, y, fillW, h, 12); ctx.fill();
+    // Overcharge zone past 100% glows
+    if (treb.charge > 1.0) {
+      const ow = w * Math.min(0.5, (treb.charge - 1.0));
+      ctx.fillStyle = 'rgba(255, 235, 120, 0.6)';
+      roundRect(ctx, x + w - ow, y, ow, h, 12); ctx.fill();
+    }
+  } else if (treb.phase === 'flying') {
+    // Distance counter top-center
+    const txt = `${Math.max(0, Math.round(treb.fx))} ft`;
+    ctx.font = '900 60px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(20,14,6,0.5)';
+    roundRect(ctx, W / 2 - 130, 18, 260, 70, 14); ctx.fill();
+    ctx.fillStyle = '#fff8d6';
+    ctx.fillText(txt, W / 2, 28);
+  } else if (treb.phase === 'landed') {
+    // Big result + Throw Again button
+    ctx.font = '900 90px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(20,14,6,0.55)';
+    roundRect(ctx, W / 2 - 360, H / 2 - 110, 720, 160, 22); ctx.fill();
+    ctx.fillStyle = '#ffd93d';
+    if (treb.sailing) {
+      ctx.fillText('LANDED ON THE MAYFLOWER!', W / 2, H / 2 - 36);
+      ctx.font = '700 26px system-ui';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('Set sail for the New World — bon voyage!', W / 2, H / 2 + 24);
+    } else {
+      ctx.fillText(`${treb.distance} FEET!`, W / 2, H / 2 - 36);
+      ctx.font = '700 26px system-ui';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(distanceTagline(treb.distance), W / 2, H / 2 + 24);
+    }
+    // "Throw Again" lives on the top-left finish button now.
+  }
+}
+
+function distanceTagline(ft) {
+  if (ft < 500)  return "Eh, the eyeball is fine.";
+  if (ft < 900)  return "Nice toss!";
+  if (ft < 1400) return "Now we're flying!";
+  if (ft < 1900) return "Whoa — way to belt it out!";
+  if (ft < 2500) return "POWERFUL singing!";
+  if (ft < 3200) return "That eyeball is in low orbit!";
+  return "OK, you officially yelled at the moon.";
+}
+
+function drawTrebButton(ctx, label, cx, cy, w, h, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 3;
+  roundRect(ctx, cx - w/2, cy - h/2, w, h, 14);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 22px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy);
+  ctx.restore();
+  // Stash hit-rect for click handler
+  treb._btnRect = { cx, cy, w, h, label };
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+
+function trebHandleClick(mx, my) {
+  if (state.ballMode !== 'trebuchet') return false;
+  const r = treb._btnRect;
+  if (!r) return false;
+  if (mx < r.cx - r.w/2 || mx > r.cx + r.w/2) return false;
+  if (my < r.cy - r.h/2 || my > r.cy + r.h/2) return false;
+  if (treb.phase === 'cocking' && r.label === 'Release!') { trebFire(); return true; }
+  if ((treb.phase === 'landed' || treb.phase === 'broken') && r.label === 'Throw Again') { trebReset(); return true; }
+  return false;
+}
+
+const COLORS = [
+  '#ff6b6b', '#ffd93d', '#6bcf7f', '#4d96ff', '#c780ff',
+  '#ff9f43', '#ee5a6f', '#48dbfb', '#1dd1a1', '#feca57',
+  '#ff6b9d', '#a29bfe', '#fd79a8', '#00d2d3', '#ff7675'
+];
+
+const PHRASES = [
+  'LOUDER!', 'SING IT!', 'AMAZING!', 'KEEP GOING!',
+  'WONDERFUL!', 'SO GOOD!', 'YEAH!', 'BEAUTIFUL!',
+  'WOW!', 'AWESOME!', 'BIGGER!', 'YES!', 'BRAVO!'
+];
+
+// ===== Ball class =====
+class Ball {
+  constructor(x) {
+    // Wide size variation — small marbles to big beach balls.
+    // Bias toward smaller, with occasional huge ones for variety.
+    const t = Math.random();
+    this.radius = 14 + Math.pow(t, 1.6) * 95;
+    this.x = x;
+    this.y = H - this.radius;
+    this.vx = (Math.random() - 0.5) * 30;
+    this.vy = 0;
+    this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.color2 = COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.squash = 1;       // 1 = round; <1 = compressed (no overshoot/stretch)
+    this.rotation = Math.random() * Math.PI * 2;
+    this.angVel = (Math.random() - 0.5) * 2;
+    this.trail = [];
+    this.eyeAngle = 0;
+    this.eyeBlink = 0;                       // 0 open → 1 fully closed
+    this.idleTime = Math.random() * 5;       // staggered so balls don't blink in sync
+    this.dormant = false;  // dormant balls don't react to loudness; they roll off
+    this.exitDir = 0;      // -1 = roll off left, +1 = roll off right
+    this.splatted = false; // gets removed and replaced
+    this.canLaunch = true; // armed → loudness can launch on next floor contact
+    this.seed = Math.floor(Math.random() * 100000);
+  }
+
+  update(dt, planet, restitution, loudness, mode) {
+    // Soap bubbles have completely different physics — they float up, wobble,
+    // and pop at the top of the screen. No bouncing, no squash, no trail.
+    if (mode === 'soapbubble') {
+      // Buoyancy upward, capped, with damping
+      this.vy -= 95 * dt;
+      this.vy = Math.max(this.vy, -260);
+      this.vx += Math.sin(performance.now() * 0.001 + this.seed) * 28 * dt;
+      this.vx *= Math.pow(0.985, dt * 60);
+      this.vy *= Math.pow(0.992, dt * 60);
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      // Pop at top
+      if (this.y + this.radius < -10) this.splatted = true;
+      // Soft side bounds (just a gentle wall reflect, no hard bounce)
+      if (this.x - this.radius < 0) { this.x = this.radius; this.vx = Math.abs(this.vx) * 0.3; }
+      if (this.x + this.radius > W) { this.x = W - this.radius; this.vx = -Math.abs(this.vx) * 0.3; }
+      this.squash = 1;
+      this.rotation += this.angVel * dt * 0.3;
+      return;
+    }
+
+    const g = BASE_G * planet.gMul;
+
+    // Gravity (in space, no gravity → balls drift)
+    this.vy += g * dt;
+
+    // Drag (water is much draggier)
+    this.vx *= Math.pow(planet.drag, dt * 60);
+    this.vy *= Math.pow(planet.drag, dt * 60);
+
+    // Position
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    // Re-arm the loudness-launch as soon as the ball clearly leaves the floor.
+    if (this.y + this.radius < H - 1) this.canLaunch = true;
+
+    // Floor collision — THIS is the only place loudness adds energy.
+    // Once airborne, the ball completes its trajectory uninterrupted.
+    // Uses >= so zero-gravity (Space) balls resting exactly at H - r still
+    // enter the block and can be launched by singing.
+    if (this.y + this.radius >= H) {
+      this.y = H - this.radius;
+      const impactSpeed = Math.abs(this.vy);
+
+      // Splat! Fragile ball modes burst on the floor when they hit hard.
+      // Threshold still scales with size so tiny ones don't pop on tap-tap.
+      // Popcorn is the most fragile (pops on a much softer impact).
+      const splattable =
+        mode === 'watermelon' || mode === 'eyeball' || mode === 'popcorn';
+      const splatBase = mode === 'popcorn' ? 600 : mode === 'eyeball' ? 1300 : 1000;
+      const splatThreshold = splatBase + this.radius * 4;
+      if (!this.dormant && impactSpeed > splatThreshold && splattable) {
+        this.splatted = true;
+        splats.push(new Splat(this.x, this.radius, mode, this.color));
+        return; // skip the rest of this tick — the ball is gone
+      }
+
+      // Sleep threshold scales with gravity-per-frame so a "real impact"
+      // means more than what gravity alone would add in one tick. This kills
+      // the per-frame micro-bouncing that was driving the squash spring at
+      // every tick (visible as ball vibration), especially on heavy planets.
+      const sleepThreshold = Math.max(60, g * dt * 2.2);
+
+      // One-shot squash from impact — set directly, never overshoots above 1.
+      const impactSquash = Math.max(0.55, 1 - impactSpeed / 1500);
+
+      if (this.dormant) {
+        // Dormant balls don't bounce — they settle and roll.
+        this.vy = 0;
+        if (impactSpeed > 80) this.squash = Math.min(this.squash, Math.max(0.8, impactSquash));
+      } else if (impactSpeed > sleepThreshold) {
+        // Natural bounce with restitution — preserve rotation across impact
+        this.vy = -impactSpeed * restitution;
+        this.vx *= 0.96;
+        this.angVel *= 0.96;
+        if (impactSquash < this.squash) this.squash = impactSquash;
+      } else {
+        this.vy = 0;
+        this.vx *= 0.85;
+        this.angVel *= 0.85;
+      }
+
+      // Loudness launch — only for active, armed (non-dormant) balls.
+      // canLaunch is set false after firing and only re-armed when the ball
+      // is clearly airborne again. Without this, sustained ambient noise
+      // re-triggered the launch every frame → visible vibration.
+      if (loudness > 0.04 && !this.dormant && this.canLaunch) {
+        this.canLaunch = false;
+        // Per-ball randomization → louder = more chaos, not more sync.
+        const variance = 0.35 + loudness * 0.55;
+        const lo = Math.max(0.05, loudness * (1 - variance));
+        const hi = loudness * (1 + variance * 0.4);
+        const ballLoud = lo + Math.random() * (hi - lo);
+
+        if (g > 0.01) {
+          const targetHeight = ballLoud * H * 0.95;
+          const launchV = Math.sqrt(2 * g * targetHeight);
+          if (-this.vy < launchV) this.vy = -launchV;
+          this.vx += (Math.random() - 0.5) * loudness * 900;
+          const ls = Math.max(0.55, 0.65 - ballLoud * 0.1);
+          if (ls < this.squash) this.squash = ls;
+        } else {
+          const speed = 200 + ballLoud * 1800;
+          const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.1;
+          this.vx += Math.cos(angle) * speed * 0.6;
+          this.vy = Math.sin(angle) * speed;
+          if (0.6 < this.squash) this.squash = 0.6;
+        }
+      }
+    }
+    // Ceiling — pure elastic-ish bounce, no loudness coupling
+    if (this.y - this.radius < 0) {
+      this.y = this.radius;
+      this.vy = Math.abs(this.vy) * restitution;
+    }
+    // Dormant drift — gentle nudge toward the exit side so they roll off.
+    if (this.dormant && this.exitDir) {
+      const targetVx = this.exitDir * 130;
+      this.vx += (targetVx - this.vx) * Math.min(1, dt * 1.6);
+    }
+
+    // Walls — pure bounce, no loudness coupling.
+    // Dormant balls leave the screen on their assigned exit side.
+    if (this.x - this.radius < 0 && !(this.dormant && this.exitDir < 0)) {
+      this.x = this.radius;
+      this.vx = Math.abs(this.vx) * restitution;
+      this.angVel = -this.angVel;
+    }
+    if (this.x + this.radius > W && !(this.dormant && this.exitDir > 0)) {
+      this.x = W - this.radius;
+      this.vx = -Math.abs(this.vx) * restitution;
+      this.angVel = -this.angVel;
+    }
+
+    // Squash recovery — simple smooth ease back to 1.
+    // No overshoot, no oscillation. The ball can only be compressed (≤1).
+    if (this.squash < 1) {
+      this.squash += (1 - this.squash) * Math.min(1, dt * 14);
+      if (this.squash > 0.999) this.squash = 1;
+    }
+
+    // Rotation
+    this.rotation += this.angVel * dt;
+
+    // Eye behavior — when at rest, slowly drift the gaze around and
+    // blink occasionally. While moving, look toward direction of travel.
+    const speed = Math.hypot(this.vx, this.vy);
+    const onFloor = this.y + this.radius >= H - 2;
+    const resting = onFloor && speed < 30 && !this.dormant;
+    let targetEyeAngle;
+    if (resting) {
+      this.idleTime += dt;
+      const tt = this.idleTime;
+      const dx = Math.sin(tt * 0.6 + this.seed * 0.013);
+      const dy = Math.cos(tt * 0.42 + this.seed * 0.027) * 0.55;
+      targetEyeAngle = Math.atan2(dy, dx);
+      // Per-ball blink cadence (~3.5s..6.5s) so they don't blink in unison
+      const blinkPeriod = 3.5 + ((this.seed * 7) % 30) / 10;
+      const phase = tt % blinkPeriod;
+      const blinkDur = 0.16;
+      this.eyeBlink = phase < blinkDur ? Math.sin((phase / blinkDur) * Math.PI) : 0;
+    } else {
+      targetEyeAngle = Math.atan2(this.vy, this.vx);
+      this.eyeBlink = 0;
+    }
+    let diff = targetEyeAngle - this.eyeAngle;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    this.eyeAngle += diff * Math.min(1, dt * (resting ? 1.6 : 6));
+
+    // Trail
+    this.trail.push({ x: this.x, y: this.y, r: this.radius });
+    if (this.trail.length > 8) this.trail.shift();
+  }
+
+  draw(ctx, mode) {
+    // Soap bubbles: no trail, no ground shadow, no rotation/squash transform —
+    // just a translucent disk drawn at the ball's position.
+    if (mode === 'soapbubble') {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      drawBall(ctx, this.radius, this.color, this.color2, mode, this.eyeAngle, this.rotation, this.seed, this.eyeBlink);
+      ctx.restore();
+      return;
+    }
+
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.18;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.r * (i / this.trail.length), 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = alpha;
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Ground shadow — bigger and softer when ball is high; tight and dark when near floor.
+    const heightAboveFloor = Math.max(0, (H - this.radius) - this.y);
+    const closeness = 1 - Math.min(1, heightAboveFloor / 600); // 1 near floor, 0 high up
+    const shAlpha = 0.12 + 0.32 * closeness;
+    const shScaleX = 0.65 + 0.45 * closeness;
+    const shScaleY = 0.18 + 0.12 * closeness;
+    ctx.save();
+    ctx.translate(this.x, H - 2);
+    const sg = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+    sg.addColorStop(0, `rgba(0,0,0,${shAlpha})`);
+    sg.addColorStop(0.65, `rgba(0,0,0,${shAlpha * 0.45})`);
+    sg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.radius * shScaleX, this.radius * shScaleY, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    // Subtle deformation: vertical squash with mild horizontal stretch.
+    // No oval-look mid-air — when squash is 1, both axes are 1.
+    const sy = this.squash;
+    const sx = 1 + (1 - this.squash) * 0.45;
+    // Anchor the ball to its bottom (the contact point) so a compressed ball
+    // "sits down" on the floor instead of floating as a flatter ellipse.
+    ctx.translate(this.x, this.y + this.radius * (1 - sy));
+    ctx.scale(sx, sy);
+    // For face-y modes, don't rotate (faces stay upright); for spinning modes, rotate
+    const rotates = mode === 'classic' || mode === 'soccer' ||
+                    mode === 'tennis' || mode === 'watermelon' ||
+                    mode === 'popcorn';
+    if (rotates) ctx.rotate(this.rotation);
+
+    drawBall(ctx, this.radius, this.color, this.color2, mode, this.eyeAngle, this.rotation, this.seed, this.eyeBlink);
+
+    ctx.restore();
+  }
+}
+
+// ===== Per-mode drawing =====
+function drawBall(ctx, r, color, color2, mode, eyeAngle, rotation, seed = 0, eyeBlink = 0) {
+  if (mode === 'classic') {
+    // Layered radial: bright highlight tint, body color, deeper rim color
+    const grad = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.05, -r * 0.1, -r * 0.05, r * 1.1);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.18, lighten(color, 0.35));
+    grad.addColorStop(0.55, color);
+    grad.addColorStop(1, darken(color, 0.45));
+    ctx.fillStyle = grad;
+    circle(ctx, 0, 0, r);
+    addShine(ctx, r);
+  }
+  else if (mode === 'soccer') {
+    ctx.fillStyle = '#ffffff';
+    circle(ctx, 0, 0, r);
+    // Black pentagons (simplified as 6 dots around)
+    ctx.fillStyle = '#111';
+    const pent = (cx, cy, pr) => {
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+        const px = cx + Math.cos(a) * pr;
+        const py = cy + Math.sin(a) * pr;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+    pent(0, 0, r * 0.28);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+      pent(Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6, r * 0.2);
+    }
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    circle(ctx, 0, 0, r, true);
+    addShine(ctx, r, 0.7);
+  }
+  else if (mode === 'tennis') {
+    // Felt-like gradient
+    const grad = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.05, -r * 0.1, -r * 0.05, r * 1.1);
+    grad.addColorStop(0, '#f1ff85');
+    grad.addColorStop(0.5, '#d4ff3a');
+    grad.addColorStop(1, '#7a9410');
+    ctx.fillStyle = grad;
+    circle(ctx, 0, 0, r);
+    // fuzzy felt speckle
+    ctx.save();
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,200,0.35)';
+    for (let i = 0; i < 80; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const rr = Math.sqrt(Math.random()) * r;
+      circle(ctx, Math.cos(a) * rr, Math.sin(a) * rr, 0.4 + Math.random() * 0.8);
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1.5, r * 0.08);
+    ctx.lineCap = 'round';
+    // Curved seams
+    ctx.beginPath();
+    ctx.arc(-r * 0.7, 0, r * 1.0, -Math.PI / 3, Math.PI / 3);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(r * 0.7, 0, r * 1.0, Math.PI - Math.PI / 3, Math.PI + Math.PI / 3);
+    ctx.stroke();
+    addShine(ctx, r, 0.7);
+  }
+  else if (mode === 'watermelon') {
+    // Pink flesh
+    ctx.fillStyle = '#ff5c8a';
+    circle(ctx, 0, 0, r);
+    // Inner light pink ring
+    ctx.fillStyle = '#ff85a8';
+    circle(ctx, 0, 0, r * 0.85);
+    ctx.fillStyle = '#ff5c8a';
+    circle(ctx, 0, 0, r * 0.78);
+    // Seeds
+    ctx.fillStyle = '#1a1a1a';
+    const seeds = 8;
+    for (let i = 0; i < seeds; i++) {
+      const a = (i / seeds) * Math.PI * 2;
+      const sr = r * 0.5;
+      ctx.save();
+      ctx.translate(Math.cos(a) * sr, Math.sin(a) * sr);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.06, r * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Green rind ring
+    ctx.strokeStyle = '#2eb84a';
+    ctx.lineWidth = r * 0.14;
+    circle(ctx, 0, 0, r * 0.93, true);
+    ctx.strokeStyle = '#0f5c1f';
+    ctx.lineWidth = r * 0.05;
+    circle(ctx, 0, 0, r * 0.99, true);
+    addShine(ctx, r, 0.6);
+  }
+  else if (mode === 'eyeball') {
+    // White sclera
+    const grad = ctx.createRadialGradient(-r * 0.2, -r * 0.2, r * 0.1, 0, 0, r);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#e8e8f0');
+    ctx.fillStyle = grad;
+    circle(ctx, 0, 0, r);
+    // Red veins
+    ctx.strokeStyle = 'rgba(220, 50, 50, 0.4)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + 0.3;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r * 0.95, Math.sin(a) * r * 0.95);
+      ctx.quadraticCurveTo(
+        Math.cos(a + 0.2) * r * 0.6, Math.sin(a + 0.2) * r * 0.6,
+        Math.cos(a + 0.1) * r * 0.4, Math.sin(a + 0.1) * r * 0.4
+      );
+      ctx.stroke();
+    }
+    // Iris (looks toward velocity, or drifts when at rest)
+    const lookOffset = r * 0.35;
+    const lx = Math.cos(eyeAngle) * lookOffset;
+    const ly = Math.sin(eyeAngle) * lookOffset;
+    // Blink — vertically squish the iris/pupil/catchlight around their center
+    const openY = Math.max(0.04, 1 - eyeBlink);
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.scale(1, openY);
+    ctx.translate(-lx, -ly);
+    ctx.fillStyle = color;
+    circle(ctx, lx, ly, r * 0.42);
+    const iris = ctx.createRadialGradient(lx, ly, r * 0.05, lx, ly, r * 0.42);
+    iris.addColorStop(0, color);
+    iris.addColorStop(0.7, color);
+    iris.addColorStop(1, '#000000');
+    ctx.fillStyle = iris;
+    circle(ctx, lx, ly, r * 0.42);
+    ctx.fillStyle = '#000';
+    circle(ctx, lx, ly, r * 0.2);
+    ctx.fillStyle = '#fff';
+    circle(ctx, lx - r * 0.08, ly - r * 0.08, r * 0.06);
+    ctx.restore();
+    // Eyelid line at the height of the closing eye (only visible mid-blink)
+    if (eyeBlink > 0.4) {
+      ctx.strokeStyle = `rgba(40, 22, 12, ${Math.min(1, (eyeBlink - 0.4) * 1.7)})`;
+      ctx.lineWidth = r * 0.06;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.78, ly);
+      ctx.lineTo(r * 0.78, ly);
+      ctx.stroke();
+    }
+    // Wet sclera shine over the whole eyeball
+    addShine(ctx, r, 0.55);
+  }
+  else if (mode === 'popcorn') {
+    // Popcorn — irregular cluster of fluffy lobes around a kernel core.
+    // Per-piece variety driven by `seed` so each puff looks different.
+    const rng = srand(seed + 1);
+    const lobes = 5 + Math.floor(rng() * 3);
+    const lobeData = [];
+    for (let i = 0; i < lobes; i++) {
+      const a = (i / lobes) * Math.PI * 2 + rng() * 0.5;
+      const dist = r * (0.35 + rng() * 0.25);
+      const lr = r * (0.42 + rng() * 0.22);
+      lobeData.push({ x: Math.cos(a) * dist, y: Math.sin(a) * dist, r: lr });
+    }
+
+    // Soft underside shadow (offset down)
+    ctx.fillStyle = 'rgba(170, 130, 70, 0.35)';
+    ctx.beginPath();
+    for (const L of lobeData) {
+      ctx.moveTo(L.x + L.r, L.y + r * 0.1);
+      ctx.arc(L.x, L.y + r * 0.1, L.r * 1.02, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Cream body
+    ctx.fillStyle = '#fff5d8';
+    ctx.beginPath();
+    for (const L of lobeData) {
+      ctx.moveTo(L.x + L.r, L.y);
+      ctx.arc(L.x, L.y, L.r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Bright sunlit top
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.beginPath();
+    for (const L of lobeData) {
+      const tr = L.r * 0.62;
+      ctx.moveTo(L.x + tr, L.y - r * 0.08);
+      ctx.arc(L.x - r * 0.05, L.y - r * 0.08, tr, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Buttery yellow accents (random small patches)
+    ctx.fillStyle = 'rgba(255, 200, 80, 0.55)';
+    for (let i = 0; i < 4; i++) {
+      const L = lobeData[Math.floor(rng() * lobeData.length)];
+      const a = rng() * Math.PI * 2;
+      const d = rng() * L.r * 0.5;
+      circle(ctx, L.x + Math.cos(a) * d, L.y + Math.sin(a) * d, L.r * 0.18);
+    }
+
+    // Brown kernel hint somewhere near center
+    ctx.fillStyle = '#5a2e0c';
+    const kAng = rng() * Math.PI * 2;
+    const kx = Math.cos(kAng) * r * 0.18;
+    const ky = Math.sin(kAng) * r * 0.18;
+    ctx.beginPath();
+    ctx.ellipse(kx, ky, r * 0.10, r * 0.07, rng() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tiny pinpoint highlight on the brightest lobe
+    const top = lobeData.reduce((a, b) => a.y < b.y ? a : b);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    circle(ctx, top.x - top.r * 0.25, top.y - top.r * 0.45, top.r * 0.18);
+  }
+  else if (mode === 'soapbubble') {
+    // Translucent soap bubble with iridescent color hints and a bright catchlight.
+    ctx.save();
+    // Body — very subtle gradient, mostly transparent
+    const body = ctx.createRadialGradient(-r * 0.25, -r * 0.3, r * 0.05, 0, 0, r);
+    body.addColorStop(0, 'rgba(255, 255, 255, 0.32)');
+    body.addColorStop(0.55, 'rgba(190, 230, 255, 0.10)');
+    body.addColorStop(0.85, 'rgba(160, 200, 255, 0.18)');
+    body.addColorStop(1, 'rgba(140, 190, 255, 0.30)');
+    ctx.fillStyle = body;
+    circle(ctx, 0, 0, r);
+
+    // Iridescent color smears (rainbow oil-slick look)
+    ctx.globalCompositeOperation = 'screen';
+    const sheen = (cx, cy, sr, c) => {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, sr);
+      g.addColorStop(0, c + '80');
+      g.addColorStop(0.6, c + '20');
+      g.addColorStop(1, c + '00');
+      ctx.fillStyle = g;
+      circle(ctx, cx, cy, sr);
+    };
+    sheen( r * 0.25,  r * 0.20, r * 0.55, '#ff9eea');
+    sheen(-r * 0.30,  r * 0.10, r * 0.55, '#9eeaff');
+    sheen( r * 0.10, -r * 0.30, r * 0.50, '#fff09e');
+    sheen(-r * 0.10,  r * 0.35, r * 0.45, '#9effbf');
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Outer rim line (thin, bright)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.lineWidth = Math.max(1, r * 0.04);
+    circle(ctx, 0, 0, r * 0.97, true);
+    // Inner rim glow
+    ctx.strokeStyle = 'rgba(180, 220, 255, 0.35)';
+    ctx.lineWidth = Math.max(0.6, r * 0.015);
+    circle(ctx, 0, 0, r * 0.92, true);
+
+    // Bright catchlight on the upper-left (large soft + tight pinpoint)
+    const cl = ctx.createRadialGradient(-r * 0.42, -r * 0.42, 0, -r * 0.42, -r * 0.42, r * 0.42);
+    cl.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    cl.addColorStop(0.5, 'rgba(255, 255, 255, 0.25)');
+    cl.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = cl;
+    circle(ctx, -r * 0.42, -r * 0.42, r * 0.42);
+    // Tiny crescent reflection on the lower-right
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = Math.max(1, r * 0.05);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.85, 0.25, 1.0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Storybook hand-drawn outline — stamps a wobbly ink line around every
+  // ball. Skipped for bubbles (their look depends on a translucent rim).
+  if (mode !== 'soapbubble') {
+    storybookOutline(ctx, r, seed);
+  }
+}
+
+function circle(ctx, x, y, r, stroke) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  if (stroke) ctx.stroke(); else ctx.fill();
+}
+
+// ===== Storybook style helpers =====
+// Adds the hand-drawn, wobbly-edge, paper-textured feel that gives the
+// scene its illustrated children's-book character.
+
+// Builds a slightly irregular circle path. `seed` makes the wobble
+// deterministic per ball, so the shape is stable across frames.
+function wobblyCirclePath(ctx, cx, cy, r, seed, segments = 28, wobbleAmt = 0.035) {
+  const rng = srand(seed);
+  // Pre-roll wobbles so the closed path matches at the seam
+  const ws = [];
+  for (let i = 0; i < segments; i++) ws.push(1 + (rng() - 0.5) * wobbleAmt * 2);
+  ctx.beginPath();
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI * 2;
+    const w = ws[i % segments];
+    const x = cx + Math.cos(a) * r * w;
+    const y = cy + Math.sin(a) * r * w;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+}
+
+// Two-pass slightly-offset wobbly outline — the signature storybook line.
+function storybookOutline(ctx, r, seed, color = 'rgba(38, 24, 12, 0.9)') {
+  const rng = srand(seed + 12345);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let pass = 0; pass < 2; pass++) {
+    const ox = (rng() - 0.5) * Math.max(1, r * 0.025);
+    const oy = (rng() - 0.5) * Math.max(1, r * 0.025);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = pass === 0 ? Math.max(2, r * 0.075) : Math.max(1.2, r * 0.045);
+    ctx.globalAlpha = pass === 0 ? 1 : 0.55;
+    wobblyCirclePath(ctx, ox, oy, r * 0.99, seed + pass * 7, 26, 0.035);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Pre-rendered warm paper texture — applied as a multiply overlay over the
+// whole scene each frame. Cached because it never changes.
+let _paperTex = null;
+function getPaperTex() {
+  if (_paperTex) return _paperTex;
+  const SIZE = 256;
+  const cv = document.createElement('canvas');
+  cv.width = SIZE; cv.height = SIZE;
+  const c = cv.getContext('2d');
+  // Cream base
+  c.fillStyle = '#f6ebd1';
+  c.fillRect(0, 0, SIZE, SIZE);
+  // Fine grain (per-pixel noise)
+  const img = c.getImageData(0, 0, SIZE, SIZE);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 28;
+    img.data[i]   = Math.max(0, Math.min(255, img.data[i]   + n));
+    img.data[i+1] = Math.max(0, Math.min(255, img.data[i+1] + n * 0.95));
+    img.data[i+2] = Math.max(0, Math.min(255, img.data[i+2] + n * 0.7));
+  }
+  c.putImageData(img, 0, 0);
+  // Faint warm stains for that aged-paper look
+  for (let i = 0; i < 14; i++) {
+    const x = Math.random() * SIZE;
+    const y = Math.random() * SIZE;
+    const rr = 8 + Math.random() * 28;
+    const g = c.createRadialGradient(x, y, 0, x, y, rr);
+    g.addColorStop(0, 'rgba(155, 115, 60, 0.07)');
+    g.addColorStop(1, 'rgba(155, 115, 60, 0)');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, rr, 0, Math.PI * 2); c.fill();
+  }
+  // Tiny dark specks
+  for (let i = 0; i < 60; i++) {
+    c.fillStyle = `rgba(60, 40, 20, ${0.05 + Math.random() * 0.08})`;
+    c.beginPath();
+    c.arc(Math.random() * SIZE, Math.random() * SIZE, Math.random() * 1.2, 0, Math.PI * 2);
+    c.fill();
+  }
+  _paperTex = cv;
+  return cv;
+}
+
+function applyPaperOverlay(ctx) {
+  const pat = ctx.createPattern(getPaperTex(), 'repeat');
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = pat;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  // Subtle warm tint on top, very low alpha
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = '#a86a28';
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// Hex color tweaks (#rrggbb → rgb()). f<1 darkens, lighten blends with white.
+function _parseHex(hex) {
+  const c = hex.replace('#', '');
+  const n = parseInt(c.length === 3
+    ? c.split('').map(x => x + x).join('')
+    : c, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function darken(hex, f) {
+  const [r, g, b] = _parseHex(hex);
+  return `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`;
+}
+function lighten(hex, f) {
+  const [r, g, b] = _parseHex(hex);
+  return `rgb(${Math.round(r + (255 - r) * f)},${Math.round(g + (255 - g) * f)},${Math.round(b + (255 - b) * f)})`;
+}
+
+// Adds rim shading + soft specular over an already-drawn ball.
+// Light source is upper-left; rim/AO is bottom-right.
+function addShine(ctx, r, intensity = 1) {
+  // Bottom-right rim shadow (ambient occlusion-ish)
+  const rim = ctx.createRadialGradient(r * 0.18, r * 0.25, r * 0.15, r * 0.18, r * 0.25, r * 1.05);
+  rim.addColorStop(0, 'rgba(0,0,0,0)');
+  rim.addColorStop(0.62, 'rgba(0,0,0,0)');
+  rim.addColorStop(0.92, `rgba(0,0,0,${0.28 * intensity})`);
+  rim.addColorStop(1, `rgba(0,0,0,${0.42 * intensity})`);
+  ctx.fillStyle = rim;
+  circle(ctx, 0, 0, r);
+  // Soft broad highlight
+  const spec = ctx.createRadialGradient(-r * 0.42, -r * 0.45, 0, -r * 0.42, -r * 0.45, r * 0.55);
+  spec.addColorStop(0, `rgba(255,255,255,${0.55 * intensity})`);
+  spec.addColorStop(0.45, `rgba(255,255,255,${0.12 * intensity})`);
+  spec.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = spec;
+  circle(ctx, 0, 0, r);
+  // Tight specular pinpoint
+  ctx.fillStyle = `rgba(255,255,255,${0.92 * intensity})`;
+  circle(ctx, -r * 0.44, -r * 0.46, r * 0.07);
+}
+function triangle(ctx, x, y, size) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - size * 0.5);
+  ctx.lineTo(x - size * 0.5, y + size * 0.4);
+  ctx.lineTo(x + size * 0.5, y + size * 0.4);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ===== Confetti =====
+class Confetti {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 800;
+    this.vy = -Math.random() * 900 - 200;
+    this.color = color;
+    this.size = 4 + Math.random() * 7;
+    this.life = 1;
+    this.rotation = Math.random() * Math.PI;
+    this.rotSpeed = (Math.random() - 0.5) * 12;
+  }
+  update(dt, planet) {
+    this.vy += BASE_G * planet.gMul * 0.7 * dt;
+    this.vx *= Math.pow(0.98, dt * 60);
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.rotation += this.rotSpeed * dt;
+    this.life -= dt * 0.8;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size * 1.5);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===== Splat (for watermelons / eyeballs that hit too hard) =====
+class Splat {
+  constructor(x, ballR, mode, color) {
+    this.x = x;
+    this.mode = mode;
+    this.color = color;
+    this.life = 1;          // floor blob fade (1 → 0 over ~5s)
+    this.blobR = ballR * (1.7 + Math.random() * 0.7);
+    this.chunks = [];
+    const n = 24 + Math.floor(Math.random() * 22);
+    for (let i = 0; i < n; i++) {
+      this.chunks.push({
+        x: x + (Math.random() - 0.5) * ballR * 0.8,
+        y: H - 6 - Math.random() * 6,
+        vx: (Math.random() - 0.5) * (700 + ballR * 6),
+        vy: -(180 + Math.random() * 700),
+        size: 4 + Math.random() * (ballR * 0.18 + 6),
+        kind: Math.random() < 0.55 ? 'drop' : 'chunk',
+        rot: Math.random() * Math.PI * 2,
+        rotSpd: (Math.random() - 0.5) * 14,
+        life: 1,
+      });
+    }
+  }
+  update(dt, planet) {
+    this.life -= dt * 0.22;
+    for (const c of this.chunks) {
+      c.vy += BASE_G * planet.gMul * 0.7 * dt;
+      c.vx *= Math.pow(0.985, dt * 60);
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.rot += c.rotSpd * dt;
+      if (c.y > H - 3) {
+        c.y = H - 3;
+        c.vy = -Math.abs(c.vy) * 0.25;
+        c.vx *= 0.55;
+        c.rotSpd *= 0.6;
+      }
+      c.life -= dt * 0.55;
+    }
+    this.chunks = this.chunks.filter(c => c.life > 0);
+  }
+  draw(ctx) {
+    // Floor blob
+    if (this.life > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, this.life * 1.2) * 0.85;
+      const grad = ctx.createRadialGradient(this.x, H - 2, 2, this.x, H - 2, this.blobR);
+      if (this.mode === 'watermelon') {
+        grad.addColorStop(0, '#d11a3a');
+        grad.addColorStop(0.6, 'rgba(170,20,40,0.6)');
+        grad.addColorStop(1, 'rgba(120,10,30,0)');
+      } else if (this.mode === 'popcorn') {
+        // Buttery yellow puddle with cream center
+        grad.addColorStop(0, 'rgba(255, 240, 190, 0.95)');
+        grad.addColorStop(0.5, 'rgba(255, 200, 90, 0.6)');
+        grad.addColorStop(1, 'rgba(180, 130, 50, 0)');
+      } else {
+        grad.addColorStop(0, 'rgba(230,238,255,0.92)');
+        grad.addColorStop(0.6, 'rgba(200,215,240,0.5)');
+        grad.addColorStop(1, 'rgba(180,200,230,0)');
+      }
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(this.x, H - 2, this.blobR, this.blobR * 0.38, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Chunks
+    for (const c of this.chunks) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, c.life));
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      if (this.mode === 'watermelon') {
+        if (c.kind === 'drop') {
+          ctx.fillStyle = '#e62e4a';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, c.size * 0.55, c.size, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#ff5c8a';
+          ctx.beginPath(); ctx.arc(0, 0, c.size, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#1a1a1a';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, c.size * 0.18, c.size * 0.34, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // green rind edge
+          ctx.strokeStyle = '#2eb84a';
+          ctx.lineWidth = Math.max(1, c.size * 0.18);
+          ctx.beginPath(); ctx.arc(0, 0, c.size * 0.95, 0.4, 2.2); ctx.stroke();
+        }
+      } else if (this.mode === 'popcorn') {
+        if (c.kind === 'drop') {
+          // Buttery oil droplet
+          ctx.fillStyle = 'rgba(255, 200, 80, 0.85)';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, c.size * 0.55, c.size, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Tiny brown speck (broken kernel bit)
+          if (c.size > 6) {
+            ctx.fillStyle = '#5a2e0c';
+            ctx.beginPath();
+            ctx.arc(0, 0, c.size * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          // Fluffy popcorn fragment — small irregular puff
+          ctx.fillStyle = '#fff5d8';
+          ctx.beginPath();
+          for (let k = 0; k < 4; k++) {
+            const a = (k / 4) * Math.PI * 2;
+            const px = Math.cos(a) * c.size * 0.4;
+            const py = Math.sin(a) * c.size * 0.4;
+            ctx.moveTo(px + c.size * 0.55, py);
+            ctx.arc(px, py, c.size * 0.55, 0, Math.PI * 2);
+          }
+          ctx.fill();
+          // Buttery yellow accent
+          ctx.fillStyle = 'rgba(255, 200, 80, 0.6)';
+          ctx.beginPath();
+          ctx.arc(0, 0, c.size * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // eyeball goo
+        if (c.kind === 'drop') {
+          ctx.fillStyle = 'rgba(220,232,255,0.9)';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, c.size * 0.55, c.size, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#fde6e6';
+          ctx.beginPath(); ctx.arc(0, 0, c.size, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(200,40,40,0.7)';
+          ctx.lineWidth = Math.max(0.7, c.size * 0.08);
+          ctx.beginPath();
+          ctx.moveTo(-c.size * 0.7, -c.size * 0.1);
+          ctx.quadraticCurveTo(0, c.size * 0.3, c.size * 0.7, -c.size * 0.05);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  get done() { return this.life <= 0 && this.chunks.length === 0; }
+}
+const splats = [];
+
+// ===== Per-planet animated state =====
+const stars = [];
+for (let i = 0; i < 240; i++) {
+  stars.push({
+    x: Math.random(), y: Math.random(),
+    s: Math.pow(Math.random(), 2) * 1.8 + 0.3,
+    tw: Math.random() * Math.PI * 2,
+    twSpd: 0.5 + Math.random() * 2,
+    color: Math.random() < 0.85
+      ? [255, 255, 255]
+      : (Math.random() < 0.5 ? [180, 200, 255] : [255, 220, 200])
+  });
+}
+const clouds = [];
+for (let i = 0; i < 8; i++) {
+  clouds.push({
+    x: Math.random(), y: 0.05 + Math.random() * 0.35,
+    s: 80 + Math.random() * 180,
+    spd: 0.002 + Math.random() * 0.005,
+    puff: Math.floor(4 + Math.random() * 4),
+    seed: Math.random() * 1000
+  });
+}
+const meteors = []; // shooting stars in space/moon
+const bubbles = [];
+const waterMotes = [];
+for (let i = 0; i < 50; i++) {
+  waterMotes.push({
+    x: Math.random(), y: Math.random(),
+    s: 0.6 + Math.random() * 1.6,
+    vy: -3 - Math.random() * 8,
+    wob: Math.random() * Math.PI * 2
+  });
+}
+
+// ===== Static background layer cache =====
+// Renders expensive detail (terrain, planets, nebulae) once per resize/planet
+// to an offscreen canvas; the main loop blits it and overlays animated bits.
+const bgCache = { key: null, canvas: null };
+function getStaticBg(planetKey) {
+  const key = `${planetKey}_${W}_${H}`;
+  if (bgCache.key === key) return bgCache.canvas;
+  const oc = document.createElement('canvas');
+  oc.width = W; oc.height = H;
+  const o = oc.getContext('2d');
+  STATIC_RENDERERS[planetKey](o);
+  bgCache.key = key;
+  bgCache.canvas = oc;
+  return oc;
+}
+window.addEventListener('resize', () => { bgCache.key = null; });
+
+// Helper: random with seed (deterministic terrain)
+function srand(seed) {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+}
+
+const STATIC_RENDERERS = {
+  earth(o) {
+    // Sky gradient: deep blue → light blue → warm horizon
+    const sky = o.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#1e4d8c');
+    sky.addColorStop(0.4, '#5a9fd6');
+    sky.addColorStop(0.75, '#a8d4f0');
+    sky.addColorStop(0.92, '#f5d4a0');
+    sky.addColorStop(1, '#d68a5c');
+    o.fillStyle = sky;
+    o.fillRect(0, 0, W, H);
+
+    // Sun with halo
+    const sx = W * 0.82, sy = H * 0.22;
+    const halo = o.createRadialGradient(sx, sy, 0, sx, sy, Math.min(W, H) * 0.4);
+    halo.addColorStop(0, 'rgba(255, 245, 200, 0.5)');
+    halo.addColorStop(0.3, 'rgba(255, 220, 150, 0.2)');
+    halo.addColorStop(1, 'rgba(255, 200, 120, 0)');
+    o.fillStyle = halo;
+    o.fillRect(0, 0, W, H);
+    const sunGrad = o.createRadialGradient(sx, sy, 0, sx, sy, 60);
+    sunGrad.addColorStop(0, '#fffce8');
+    sunGrad.addColorStop(1, '#ffe28a');
+    o.fillStyle = sunGrad;
+    o.beginPath(); o.arc(sx, sy, 55, 0, Math.PI * 2); o.fill();
+
+    // Distant mountain layer (back, hazy)
+    o.fillStyle = 'rgba(80, 110, 150, 0.55)';
+    o.beginPath();
+    o.moveTo(0, H * 0.78);
+    const r1 = srand(7);
+    for (let x = 0; x <= W; x += 30) {
+      const y = H * 0.78 - Math.sin(x * 0.004) * 35 - Math.sin(x * 0.011) * 18 - r1() * 8;
+      o.lineTo(x, y);
+    }
+    o.lineTo(W, H); o.lineTo(0, H); o.closePath(); o.fill();
+
+    // Closer mountain layer (darker)
+    o.fillStyle = 'rgba(50, 75, 95, 0.85)';
+    o.beginPath();
+    o.moveTo(0, H * 0.85);
+    const r2 = srand(13);
+    for (let x = 0; x <= W; x += 25) {
+      const y = H * 0.85 - Math.sin(x * 0.006 + 1) * 30 - Math.sin(x * 0.018) * 14 - r2() * 6;
+      o.lineTo(x, y);
+    }
+    o.lineTo(W, H); o.lineTo(0, H); o.closePath(); o.fill();
+
+    // Grass/ground at bottom
+    const gnd = o.createLinearGradient(0, H * 0.92, 0, H);
+    gnd.addColorStop(0, '#4a8b3a');
+    gnd.addColorStop(0.5, '#2e6624');
+    gnd.addColorStop(1, '#1a3d14');
+    o.fillStyle = gnd;
+    o.fillRect(0, H * 0.92, W, H * 0.08);
+    // Grass blades
+    o.strokeStyle = 'rgba(30, 70, 20, 0.5)';
+    o.lineWidth = 1;
+    const r3 = srand(21);
+    for (let i = 0; i < W / 4; i++) {
+      const x = r3() * W;
+      const h = 4 + r3() * 8;
+      o.beginPath();
+      o.moveTo(x, H * 0.92);
+      o.lineTo(x + (r3() - 0.5) * 3, H * 0.92 - h);
+      o.stroke();
+    }
+  },
+
+  moon(o) {
+    // Dark starry sky
+    const sky = o.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#000008');
+    sky.addColorStop(0.6, '#0a0a1a');
+    sky.addColorStop(1, '#1a1a26');
+    o.fillStyle = sky;
+    o.fillRect(0, 0, W, H);
+
+    // Distant stars baked in
+    const r = srand(101);
+    for (let i = 0; i < 180; i++) {
+      const x = r() * W, y = r() * H * 0.85;
+      const s = r() * 1.4 + 0.3;
+      o.fillStyle = `rgba(255,255,255,${0.4 + r() * 0.5})`;
+      o.beginPath(); o.arc(x, y, s, 0, Math.PI * 2); o.fill();
+    }
+
+    // Earth in the sky
+    const ex = W * 0.78, ey = H * 0.18, eR = Math.min(W, H) * 0.09;
+    // Earth glow
+    const eGlow = o.createRadialGradient(ex, ey, eR * 0.9, ex, ey, eR * 1.6);
+    eGlow.addColorStop(0, 'rgba(120, 180, 255, 0.4)');
+    eGlow.addColorStop(1, 'rgba(120, 180, 255, 0)');
+    o.fillStyle = eGlow;
+    o.fillRect(ex - eR * 2, ey - eR * 2, eR * 4, eR * 4);
+    // Earth body (lit on right, dark on left)
+    const eGrad = o.createRadialGradient(ex + eR * 0.4, ey - eR * 0.2, eR * 0.1, ex, ey, eR);
+    eGrad.addColorStop(0, '#a8d4ff');
+    eGrad.addColorStop(0.4, '#3a78c4');
+    eGrad.addColorStop(0.8, '#1a3a6a');
+    eGrad.addColorStop(1, '#020814');
+    o.fillStyle = eGrad;
+    o.beginPath(); o.arc(ex, ey, eR, 0, Math.PI * 2); o.fill();
+    // Continent suggestions
+    o.fillStyle = 'rgba(80, 130, 70, 0.5)';
+    o.beginPath();
+    o.ellipse(ex + eR * 0.2, ey - eR * 0.1, eR * 0.35, eR * 0.2, 0.4, 0, Math.PI * 2);
+    o.fill();
+    o.beginPath();
+    o.ellipse(ex + eR * 0.5, ey + eR * 0.3, eR * 0.2, eR * 0.15, -0.3, 0, Math.PI * 2);
+    o.fill();
+    // Cloud swirls
+    o.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    o.beginPath();
+    o.ellipse(ex + eR * 0.1, ey + eR * 0.1, eR * 0.5, eR * 0.12, 0.3, 0, Math.PI * 2);
+    o.fill();
+
+    // Lunar surface
+    const ground = H * 0.78;
+    // Hilly horizon
+    o.fillStyle = '#3a3a44';
+    o.beginPath();
+    o.moveTo(0, ground);
+    const r2 = srand(57);
+    for (let x = 0; x <= W; x += 20) {
+      const y = ground - Math.sin(x * 0.008) * 20 - Math.sin(x * 0.022) * 10 - r2() * 6;
+      o.lineTo(x, y);
+    }
+    o.lineTo(W, H); o.lineTo(0, H); o.closePath(); o.fill();
+
+    // Lunar regolith with crater detail
+    const dust = o.createLinearGradient(0, ground, 0, H);
+    dust.addColorStop(0, '#5e5e6e');
+    dust.addColorStop(0.5, '#48485a');
+    dust.addColorStop(1, '#2e2e3a');
+    o.fillStyle = dust;
+    o.fillRect(0, ground, W, H - ground);
+    // Craters on surface
+    const r3 = srand(211);
+    for (let i = 0; i < 20; i++) {
+      const cx = r3() * W;
+      const cy = ground + 20 + r3() * (H - ground - 20);
+      const cr = 8 + r3() * 30;
+      // shadow side
+      o.fillStyle = 'rgba(0,0,0,0.35)';
+      o.beginPath(); o.arc(cx, cy, cr, 0, Math.PI * 2); o.fill();
+      // lit rim
+      o.strokeStyle = 'rgba(220, 220, 230, 0.4)';
+      o.lineWidth = 1.5;
+      o.beginPath();
+      o.arc(cx, cy, cr, Math.PI * 1.1, Math.PI * 1.9);
+      o.stroke();
+      // inner highlight
+      o.fillStyle = 'rgba(140, 140, 160, 0.5)';
+      o.beginPath(); o.arc(cx - cr * 0.2, cy - cr * 0.2, cr * 0.5, 0, Math.PI * 2); o.fill();
+    }
+  },
+
+  space(o) {
+    // Deep space with nebula
+    const sky = o.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#000004');
+    sky.addColorStop(0.5, '#06061a');
+    sky.addColorStop(1, '#020208');
+    o.fillStyle = sky;
+    o.fillRect(0, 0, W, H);
+
+    // Nebula clouds — soft colored radial gradients
+    const nebulae = [
+      { x: 0.25, y: 0.4, r: 0.5, c: [180, 60, 200] },
+      { x: 0.75, y: 0.65, r: 0.45, c: [60, 120, 240] },
+      { x: 0.5, y: 0.2, r: 0.4, c: [240, 100, 140] },
+      { x: 0.15, y: 0.75, r: 0.35, c: [80, 200, 220] }
+    ];
+    for (const n of nebulae) {
+      const cx = n.x * W, cy = n.y * H, cr = n.r * Math.min(W, H);
+      const g = o.createRadialGradient(cx, cy, 0, cx, cy, cr);
+      g.addColorStop(0, `rgba(${n.c[0]}, ${n.c[1]}, ${n.c[2]}, 0.35)`);
+      g.addColorStop(0.5, `rgba(${n.c[0]}, ${n.c[1]}, ${n.c[2]}, 0.12)`);
+      g.addColorStop(1, `rgba(${n.c[0]}, ${n.c[1]}, ${n.c[2]}, 0)`);
+      o.fillStyle = g;
+      o.fillRect(0, 0, W, H);
+    }
+
+    // Distant galaxy spiral
+    const gx = W * 0.85, gy = H * 0.25;
+    o.save();
+    o.translate(gx, gy);
+    o.rotate(0.3);
+    const ggrad = o.createRadialGradient(0, 0, 0, 0, 0, 80);
+    ggrad.addColorStop(0, 'rgba(255, 240, 200, 0.7)');
+    ggrad.addColorStop(0.4, 'rgba(200, 180, 240, 0.3)');
+    ggrad.addColorStop(1, 'rgba(120, 100, 200, 0)');
+    o.fillStyle = ggrad;
+    o.beginPath(); o.ellipse(0, 0, 80, 22, 0, 0, Math.PI * 2); o.fill();
+    // core
+    o.fillStyle = 'rgba(255, 250, 230, 0.9)';
+    o.beginPath(); o.ellipse(0, 0, 14, 7, 0, 0, Math.PI * 2); o.fill();
+    o.restore();
+  },
+
+  water(o) {
+    // Underwater gradient
+    const sky = o.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#7fd4f5');
+    sky.addColorStop(0.15, '#3a9fd0');
+    sky.addColorStop(0.5, '#0a4a7a');
+    sky.addColorStop(0.85, '#022040');
+    sky.addColorStop(1, '#5a4a30');
+    o.fillStyle = sky;
+    o.fillRect(0, 0, W, H);
+
+    // Sandy ocean floor
+    const sand = o.createLinearGradient(0, H * 0.86, 0, H);
+    sand.addColorStop(0, '#a89060');
+    sand.addColorStop(0.5, '#6a5430');
+    sand.addColorStop(1, '#3a2a18');
+    o.fillStyle = sand;
+    o.beginPath();
+    o.moveTo(0, H * 0.88);
+    const r1 = srand(141);
+    for (let x = 0; x <= W; x += 30) {
+      o.lineTo(x, H * 0.88 + Math.sin(x * 0.012) * 8 + r1() * 4);
+    }
+    o.lineTo(W, H); o.lineTo(0, H); o.closePath();
+    o.fill();
+
+    // Seaweed silhouettes
+    const r2 = srand(167);
+    for (let i = 0; i < 14; i++) {
+      const x = r2() * W;
+      const h = 60 + r2() * 140;
+      o.strokeStyle = `rgba(20, 60, 40, ${0.4 + r2() * 0.4})`;
+      o.lineWidth = 3 + r2() * 4;
+      o.lineCap = 'round';
+      o.beginPath();
+      o.moveTo(x, H * 0.88);
+      for (let s = 0; s < h; s += 12) {
+        o.lineTo(x + Math.sin(s * 0.05) * 8, H * 0.88 - s);
+      }
+      o.stroke();
+    }
+
+    // Distant fish silhouettes
+    o.fillStyle = 'rgba(10, 30, 50, 0.4)';
+    for (let i = 0; i < 5; i++) {
+      const x = r2() * W;
+      const y = H * 0.3 + r2() * H * 0.4;
+      const fs = 6 + r2() * 8;
+      o.beginPath();
+      o.ellipse(x, y, fs, fs * 0.4, 0, 0, Math.PI * 2);
+      o.fill();
+      // Tail
+      o.beginPath();
+      o.moveTo(x - fs, y);
+      o.lineTo(x - fs * 1.6, y - fs * 0.4);
+      o.lineTo(x - fs * 1.6, y + fs * 0.4);
+      o.closePath();
+      o.fill();
+    }
+  },
+
+};
+
+// ===== Balls =====
+let balls = [];
+let confetti = [];
+
+// Initial population — placed at floor like before (or scattered for bubbles).
+function seedBalls(n) {
+  balls = [];
+  for (let i = 0; i < n; i++) {
+    const b = new Ball(Math.random() * W);
+    if (state.ballMode === 'soapbubble') {
+      b.x = Math.random() * W;
+      b.y = H * (0.4 + Math.random() * 0.6);
+      b.vx = (Math.random() - 0.5) * 60;
+      b.vy = -50 - Math.random() * 80;
+    }
+    balls.push(b);
+  }
+}
+seedBalls(state.ballCount);
+
+// Spawn a fresh ball — entrance depends on the ball mode.
+//   • soapbubble: rises from below the bottom with upward velocity
+//   • everything else: flies in from off-screen on a side
+function spawnFromSide() {
+  const ball = new Ball(0);
+  if (state.ballMode === 'soapbubble') {
+    ball.x = Math.random() * W;
+    ball.y = H + ball.radius + Math.random() * 40;
+    ball.vx = (Math.random() - 0.5) * 80;
+    ball.vy = -180 - Math.random() * 160;
+    ball.angVel = 0;
+  } else {
+    const fromLeft = Math.random() < 0.5;
+    ball.x = fromLeft ? -ball.radius - 30 : W + ball.radius + 30;
+    ball.y = H * (0.15 + Math.random() * 0.55);
+    const speed = 350 + Math.random() * 450;
+    ball.vx = fromLeft ? speed : -speed;
+    ball.vy = -100 + Math.random() * 250;
+    ball.angVel = (Math.random() - 0.5) * 6;
+  }
+  balls.push(ball);
+}
+
+// Pick an active ball and mark it dormant. It will stop responding to
+// loudness, lose its bouncing energy as it lands, and gently roll off
+// the nearest side. If volume returns, wakeOne() can re-engage it.
+function sendOneAway() {
+  let candidate = null;
+  for (const b of balls) {
+    if (b.dormant) continue;
+    if (!candidate) { candidate = b; continue; }
+    // Prefer balls closer to a side
+    const cDist = Math.min(candidate.x, W - candidate.x);
+    const bDist = Math.min(b.x, W - b.x);
+    if (bDist < cDist) candidate = b;
+  }
+  if (!candidate) return;
+  candidate.dormant = true;
+  candidate.exitDir = candidate.x < W / 2 ? -1 : 1;
+}
+
+// Wake the dormant ball nearest the center (most likely still on screen)
+// so the kids see it spring back to life.
+function wakeOne() {
+  let candidate = null;
+  for (const b of balls) {
+    if (!b.dormant) continue;
+    if (b.x < -b.radius || b.x > W + b.radius) continue; // already off-screen
+    if (!candidate) { candidate = b; continue; }
+    // Prefer the ball furthest from the edge it's heading toward
+    const cDist = candidate.exitDir < 0 ? candidate.x : W - candidate.x;
+    const bDist = b.exitDir < 0 ? b.x : W - b.x;
+    if (bDist > cDist) candidate = b;
+  }
+  if (!candidate) return false;
+  candidate.dormant = false;
+  candidate.exitDir = 0;
+  // Small kick if it's resting, so it visibly re-engages
+  if (candidate.y >= H - candidate.radius - 5) {
+    candidate.vy = -250;
+    if (0.7 < candidate.squash) candidate.squash = 0.7;
+  }
+  return true;
+}
+window.addEventListener('resize', () => {
+  for (const b of balls) {
+    b.x = Math.min(b.x, W - b.radius);
+    b.y = Math.min(b.y, H - b.radius);
+  }
+});
+
+// ===== Audio =====
+let analyser, dataArray, audioCtx;
+let smoothedLoudness = 0;
+let peakLoudness = 0;
+let lastEncourageTime = 0;
+let lastPhrase = '';
+let spawnAcc = 0; // throttles ball add/remove rate
+
+async function startAudio() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert(
+        "Microphone access isn't available in this view.\n\n" +
+        "To fix this, open this file directly in Chrome or Safari:\n" +
+        "1. Find bouncing-balls.html on your Desktop\n" +
+        "2. Right-click → Open With → Chrome (or Safari)\n\n" +
+        "Or run a local server:\n" +
+        "  cd to the folder, then: python3 -m http.server 8000\n" +
+        "  Then visit http://localhost:8000/bouncing-balls.html"
+      );
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false
+    }});
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.2;
+    source.connect(analyser);
+    dataArray = new Uint8Array(analyser.fftSize);
+    startScreen.style.display = 'none';
+    document.getElementById('finishBtn').classList.remove('hidden');
+    lastFrameTime = performance.now();
+    requestAnimationFrame(loop);
+  } catch (e) {
+    alert('Could not access microphone: ' + e.message);
+  }
+}
+
+startBtn.addEventListener('click', startAudio);
+
+let lastRawRms = 0;       // raw mic RMS before sensitivity
+let lastEffectiveRms = 0; // raw RMS minus the noise gate (when auto on)
+let noiseFloor = 0.01;    // tracked low-envelope of the raw signal
+function getLoudness() {
+  if (!analyser) return 0;
+  analyser.getByteTimeDomainData(dataArray);
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const v = (dataArray[i] - 128) / 128;
+    sum += v * v;
+  }
+  lastRawRms = Math.sqrt(sum / dataArray.length);
+  // Auto mode applies a noise gate: signals close to the room's ambient
+  // floor are zeroed out so general room tone stops nudging the balls.
+  // The 1.6× multiplier + small absolute pad gives a comfortable margin
+  // above the floor before anything registers.
+  if (state.autoSensitivity) {
+    const gate = noiseFloor * 1.6 + 0.005;
+    lastEffectiveRms = Math.max(0, lastRawRms - gate);
+  } else {
+    lastEffectiveRms = lastRawRms;
+  }
+  return Math.min(1, lastEffectiveRms * state.sensitivity);
+}
+
+function showEncouragement(loudness) {
+  const now = performance.now();
+  if (loudness > 0.55 && now - lastEncourageTime > 1300) {
+    let phrase;
+    do {
+      phrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+    } while (phrase === lastPhrase && PHRASES.length > 1);
+    lastPhrase = phrase;
+    encourage.textContent = phrase;
+    encourage.style.opacity = '1';
+    encourage.style.transform = `translateX(-50%) scale(${1 + loudness * 0.4})`;
+    lastEncourageTime = now;
+    setTimeout(() => { encourage.style.opacity = '0'; }, 800);
+  }
+}
+
+function spawnConfetti(loudness) {
+  if (loudness > 0.65) {
+    const n = Math.floor(loudness * 5);
+    for (let i = 0; i < n; i++) {
+      confetti.push(new Confetti(
+        Math.random() * W,
+        H,
+        COLORS[Math.floor(Math.random() * COLORS.length)]
+      ));
+    }
+  }
+}
+
+function spawnBubble() {
+  bubbles.push({
+    x: Math.random() * W,
+    y: H + 10,
+    r: 3 + Math.random() * 12,
+    vy: -30 - Math.random() * 60,
+    wob: Math.random() * Math.PI * 2
+  });
+}
+
+// ===== Background drawing — static cache + animated overlays =====
+let bgTime = 0;
+function makeCloudSprite(c) {
+  // Build a fluffy silhouette from many overlapping puffs whose distribution
+  // is fuller in the middle and thinner toward the ends (bell-ish).
+  const padding = c.s * 1.6;
+  const cw = padding * 2.2;
+  const ch = padding * 1.4;
+  const cv = document.createElement('canvas');
+  cv.width = cw; cv.height = ch;
+  const o = cv.getContext('2d');
+  const cx = cw / 2, cy = ch / 2;
+  const rng = srand(Math.floor(c.seed * 1000) + 1);
+
+  const n = 18 + Math.floor(rng() * 8);
+  const puffs = [];
+  for (let i = 0; i < n; i++) {
+    const u = (i / (n - 1) - 0.5) * 2; // -1..1 left→right
+    const lift = Math.exp(-u * u * 1.6); // bell shape
+    puffs.push({
+      x: cx + u * c.s * 0.95 + (rng() - 0.5) * c.s * 0.18,
+      y: cy + (rng() - 0.5) * c.s * 0.18 - lift * c.s * 0.18,
+      r: c.s * (0.30 + lift * 0.22 + rng() * 0.18),
+    });
+  }
+
+  // 1) Soft underside shadow (offset down, bluish-gray)
+  o.fillStyle = 'rgba(120, 145, 175, 0.85)';
+  o.beginPath();
+  for (const p of puffs) {
+    o.moveTo(p.x + p.r, p.y + c.s * 0.12);
+    o.arc(p.x, p.y + c.s * 0.12, p.r * 1.02, 0, Math.PI * 2);
+  }
+  o.fill();
+
+  // 2) Mid body (slight gray-blue tint where shaded)
+  o.fillStyle = 'rgba(220, 228, 240, 0.95)';
+  o.beginPath();
+  for (const p of puffs) {
+    o.moveTo(p.x + p.r, p.y + c.s * 0.04);
+    o.arc(p.x, p.y + c.s * 0.04, p.r, 0, Math.PI * 2);
+  }
+  o.fill();
+
+  // 3) Bright body
+  o.fillStyle = '#ffffff';
+  o.beginPath();
+  for (const p of puffs) {
+    o.moveTo(p.x + p.r * 0.95, p.y - c.s * 0.02);
+    o.arc(p.x, p.y - c.s * 0.02, p.r * 0.95, 0, Math.PI * 2);
+  }
+  o.fill();
+
+  // 4) Sunlit top (warm white)
+  o.fillStyle = 'rgba(255, 250, 235, 0.85)';
+  o.beginPath();
+  for (const p of puffs) {
+    o.moveTo(p.x + p.r * 0.55, p.y - c.s * 0.16);
+    o.arc(p.x, p.y - c.s * 0.16, p.r * 0.55, 0, Math.PI * 2);
+  }
+  o.fill();
+
+  // 5) Tiny bright pinpoints on the sunny side
+  o.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  for (const p of puffs) {
+    if (rng() < 0.6) {
+      const sr = p.r * (0.18 + rng() * 0.18);
+      o.beginPath();
+      o.arc(p.x - p.r * 0.25, p.y - p.r * 0.45, sr, 0, Math.PI * 2);
+      o.fill();
+    }
+  }
+
+  return { canvas: cv, ox: cx, oy: cy };
+}
+
+function drawCloud(ctx, c, t) {
+  if (!c.sprite) c.sprite = makeCloudSprite(c);
+  const x = ((c.x + c.spd * t) % 1.2 - 0.1) * W;
+  const y = c.y * H;
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(c.sprite.canvas, x - c.sprite.ox, y - c.sprite.oy);
+  ctx.restore();
+}
+
+function maybeSpawnMeteor(planetKey) {
+  if (planetKey !== 'space' && planetKey !== 'moon') return;
+  if (Math.random() < 0.003) {
+    meteors.push({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.5,
+      vx: 400 + Math.random() * 600,
+      vy: 200 + Math.random() * 300,
+      life: 1,
+      len: 60 + Math.random() * 80
+    });
+  }
+}
+
+function drawBackground(planet, dt) {
+  bgTime += dt;
+  // Blit pre-rendered static layer
+  ctx.drawImage(getStaticBg(state.planet), 0, 0);
+
+  // ===== Per-planet animated overlays =====
+  if (state.planet === 'earth') {
+    for (const c of clouds) drawCloud(ctx, c, bgTime);
+  }
+
+  if (state.planet === 'space') {
+    for (const s of stars) {
+      s.tw += dt * s.twSpd;
+      const a = 0.5 + 0.5 * Math.sin(s.tw);
+      const [r, g, b] = s.color;
+      ctx.fillStyle = `rgba(${r},${g},${b},${0.3 + a * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * H, s.s, 0, Math.PI * 2);
+      ctx.fill();
+      // Cross sparkle for the brightest stars
+      if (s.s > 1.6 && a > 0.85) {
+        ctx.strokeStyle = `rgba(${r},${g},${b},${a * 0.6})`;
+        ctx.lineWidth = 0.6;
+        const sp = s.s * 4;
+        ctx.beginPath();
+        ctx.moveTo(s.x * W - sp, s.y * H);
+        ctx.lineTo(s.x * W + sp, s.y * H);
+        ctx.moveTo(s.x * W, s.y * H - sp);
+        ctx.lineTo(s.x * W, s.y * H + sp);
+        ctx.stroke();
+      }
+    }
+  }
+
+  if (state.planet === 'water') {
+    // God rays from above
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++) {
+      const x = (i / 6) * W + Math.sin(bgTime * 0.3 + i) * 40;
+      const grad = ctx.createLinearGradient(x, 0, x + 60, H * 0.7);
+      grad.addColorStop(0, 'rgba(180, 230, 255, 0.18)');
+      grad.addColorStop(1, 'rgba(180, 230, 255, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x - 30, 0);
+      ctx.lineTo(x + 30, 0);
+      ctx.lineTo(x + 90, H * 0.7);
+      ctx.lineTo(x - 90, H * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // Floating particulate motes
+    for (const m of waterMotes) {
+      m.y += (m.vy / H) * dt;
+      m.wob += dt * 1.5;
+      m.x += Math.sin(m.wob) * 0.0005;
+      if (m.y < 0) m.y = 1;
+      ctx.fillStyle = `rgba(200, 230, 255, ${0.25 + m.s * 0.1})`;
+      ctx.beginPath();
+      ctx.arc(m.x * W, m.y * H, m.s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Bubbles
+    if (Math.random() < dt * 10) spawnBubble();
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      b.y += b.vy * dt;
+      b.wob += dt * 2;
+      b.x += Math.sin(b.wob) * 20 * dt;
+      ctx.strokeStyle = 'rgba(200, 240, 255, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      if (b.y < -20) bubbles.splice(i, 1);
+    }
+  }
+
+  // Shooting stars (space + moon)
+  maybeSpawnMeteor(state.planet);
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.x += m.vx * dt;
+    m.y += m.vy * dt;
+    m.life -= dt * 0.6;
+    const tailX = m.x - (m.vx / Math.hypot(m.vx, m.vy)) * m.len;
+    const tailY = m.y - (m.vy / Math.hypot(m.vx, m.vy)) * m.len;
+    const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(1, `rgba(255,255,255,${m.life})`);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tailX, tailY); ctx.lineTo(m.x, m.y);
+    ctx.stroke();
+    if (m.life <= 0 || m.x > W + 100 || m.y > H + 100) meteors.splice(i, 1);
+  }
+}
+
+// ===== Celebration =====
+// A short (≈6s) finishing animation tailored to the current ball mode.
+const celebration = { active: false, t: 0, mode: null, duration: 6 };
+function startCelebration() {
+  if (celebration.active) return;
+  celebration.active = true;
+  celebration.t = 0;
+  celebration.mode = state.ballMode;
+  document.getElementById('finishBtn').classList.add('hidden');
+  // Big confetti burst regardless of mode
+  for (let i = 0; i < 80; i++) {
+    confetti.push(new Confetti(W * 0.5, H * 0.6, COLORS[i % COLORS.length]));
+  }
+}
+function endCelebration() {
+  celebration.active = false;
+  document.getElementById('finishBtn').classList.remove('hidden');
+}
+
+// Helper: draw a hand-drawn-feeling text banner with a soft cream backdrop.
+function celebrationBanner(ctx, lines, t) {
+  const bounce = Math.sin(t * 5) * 6;
+  const y0 = H * 0.16 + bounce;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Subtle backdrop pill
+  ctx.font = 'bold 64px system-ui, sans-serif';
+  const titleW = ctx.measureText(lines[0]).width;
+  const padX = 36, padY = 20;
+  const bw = titleW + padX * 2;
+  const bh = (lines.length === 1 ? 84 : 138);
+  ctx.fillStyle = 'rgba(250, 240, 215, 0.92)';
+  roundRect(ctx, W / 2 - bw / 2, y0 - bh / 2, bw, bh, 22);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(60, 30, 10, 0.85)';
+  ctx.lineWidth = 4;
+  roundRect(ctx, W / 2 - bw / 2, y0 - bh / 2, bw, bh, 22);
+  ctx.stroke();
+  // Title — rainbow-ish gradient
+  const grad = ctx.createLinearGradient(W / 2 - titleW / 2, 0, W / 2 + titleW / 2, 0);
+  grad.addColorStop(0, '#ff5a3a');
+  grad.addColorStop(0.5, '#ffb030');
+  grad.addColorStop(1, '#4d96ff');
+  ctx.fillStyle = grad;
+  ctx.font = 'bold 64px system-ui, sans-serif';
+  ctx.fillText(lines[0], W / 2, y0 - (lines.length > 1 ? 22 : 0));
+  if (lines[1]) {
+    ctx.fillStyle = '#3a2410';
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.fillText(lines[1], W / 2, y0 + 30);
+  }
+  ctx.restore();
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// Cyclops — for eyeball mode. A single huge friendly eye in the middle that
+// looks around and smiles.
+function drawCyclops(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.55;
+  const r = Math.min(W, H) * 0.22;
+  // Squashy entrance scale (0 → 1 over first 0.4s with a bit of overshoot)
+  const intro = Math.min(1, t / 0.4);
+  const overshoot = 1 + Math.sin(intro * Math.PI) * 0.12;
+  const scale = (intro * intro * (3 - 2 * intro)) * overshoot;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  // Sclera (white, slight veins)
+  const grad = ctx.createRadialGradient(-r * 0.2, -r * 0.25, r * 0.1, 0, 0, r);
+  grad.addColorStop(0, '#ffffff');
+  grad.addColorStop(1, '#e8e8f0');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(220, 50, 50, 0.4)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.4;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r * 0.96, Math.sin(a) * r * 0.96);
+    ctx.quadraticCurveTo(
+      Math.cos(a + 0.2) * r * 0.6, Math.sin(a + 0.2) * r * 0.6,
+      Math.cos(a + 0.1) * r * 0.4, Math.sin(a + 0.1) * r * 0.4
+    );
+    ctx.stroke();
+  }
+  // Iris that looks around
+  const lookT = Math.max(0, t - 0.5);
+  const lookX = Math.sin(lookT * 2.0) * r * 0.35;
+  const lookY = Math.cos(lookT * 1.3) * r * 0.18;
+  // Blink near t=2.4s and t=4.5s
+  const blink = Math.max(
+    0,
+    1 - Math.abs(t - 2.4) * 6,
+    1 - Math.abs(t - 4.5) * 6
+  );
+  const eyeOpenY = 1 - blink;
+  ctx.save();
+  ctx.translate(lookX, lookY);
+  ctx.scale(1, eyeOpenY);
+  // Iris
+  const iris = ctx.createRadialGradient(0, 0, r * 0.05, 0, 0, r * 0.42);
+  iris.addColorStop(0, '#7fc8ff');
+  iris.addColorStop(0.7, '#3a78c8');
+  iris.addColorStop(1, '#0a2855');
+  ctx.fillStyle = iris;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2); ctx.fill();
+  // Pupil
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.2, 0, Math.PI * 2); ctx.fill();
+  // Catchlight
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-r * 0.08, -r * 0.08, r * 0.07, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // Storybook outline (uses a fixed seed for stability)
+  storybookOutline(ctx, r, 99001);
+  ctx.restore();
+  // Smile below the eye
+  const smileY = cy + r + 30;
+  ctx.save();
+  ctx.strokeStyle = '#3a1a08';
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  const sw = r * 0.95;
+  ctx.beginPath();
+  ctx.moveTo(cx - sw, smileY);
+  ctx.quadraticCurveTo(cx, smileY + 50 + Math.sin(t * 4) * 3, cx + sw, smileY);
+  ctx.stroke();
+  ctx.restore();
+  // Banner
+  celebrationBanner(ctx, ['EYE-MAZING!', 'one big eye says GREAT JOB'], t);
+}
+
+// Watermelon — a giant slice spinning in, with juice splashes.
+function drawWatermelon(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.55;
+  const r = Math.min(W, H) * 0.24;
+  const spin = t * 1.2;
+  const intro = Math.min(1, t / 0.5);
+  const scale = intro * intro * (3 - 2 * intro);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(spin);
+  ctx.scale(scale, scale);
+  // Pink flesh
+  ctx.fillStyle = '#ff5c8a';
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  // Inner light pink
+  ctx.fillStyle = '#ff85a8';
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.85, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ff5c8a';
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2); ctx.fill();
+  // Seeds
+  ctx.fillStyle = '#1a1a1a';
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const sr = r * 0.5;
+    ctx.save();
+    ctx.translate(Math.cos(a) * sr, Math.sin(a) * sr);
+    ctx.rotate(a);
+    ctx.beginPath(); ctx.ellipse(0, 0, r * 0.05, r * 0.10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // Green rind
+  ctx.strokeStyle = '#2eb84a';
+  ctx.lineWidth = r * 0.14;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.93, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = '#0f5c1f';
+  ctx.lineWidth = r * 0.05;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.99, 0, Math.PI * 2); ctx.stroke();
+  storybookOutline(ctx, r, 88002);
+  ctx.restore();
+  // Juice droplets flying outward
+  const drops = 24;
+  for (let i = 0; i < drops; i++) {
+    const a = (i / drops) * Math.PI * 2 + t * 0.5;
+    const phase = (t * 0.6 + i * 0.13) % 1.4;
+    const dist = phase * Math.min(W, H) * 0.5;
+    const dx = cx + Math.cos(a) * dist;
+    const dy = cy + Math.sin(a) * dist;
+    const alpha = Math.max(0, 1 - phase / 1.4);
+    ctx.fillStyle = `rgba(230, 46, 74, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(dx, dy, 6, 10, a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  celebrationBanner(ctx, ['JUICY JOB!', 'watermelon-tastic singing'], t);
+}
+
+// Popcorn — every kernel pops at once into a buttery shower.
+function drawPopcorn(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.55;
+  // Big bag of popcorn silhouette
+  const intro = Math.min(1, t / 0.4);
+  const scale = intro * intro * (3 - 2 * intro);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  // Red-and-white striped bag
+  const bw = Math.min(W, H) * 0.22;
+  const bh = bw * 1.1;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, -bw / 2, -bh / 2, bw, bh, 14); ctx.fill();
+  // Stripes
+  for (let i = 0; i < 6; i++) {
+    if (i % 2 === 0) continue;
+    ctx.fillStyle = '#e8202a';
+    ctx.fillRect(-bw / 2 + i * (bw / 6), -bh / 2, bw / 6, bh);
+  }
+  // Bag opening (dark)
+  ctx.fillStyle = 'rgba(120, 70, 30, 0.4)';
+  ctx.beginPath();
+  ctx.ellipse(0, -bh / 2 + 8, bw / 2 - 8, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Bag outline
+  storybookOutline(ctx, bw / 2, 77003);
+  ctx.restore();
+  // Popcorn pieces erupting from the bag
+  const pieces = 40;
+  for (let i = 0; i < pieces; i++) {
+    const seed = i * 37;
+    const r = ((Math.sin(seed) + 1) * 8 + 6);
+    const baseAngle = -Math.PI / 2 + (((seed * 0.7) % 1) - 0.5) * Math.PI * 1.0;
+    const speed = 250 + (Math.cos(seed) + 1) * 200;
+    // simple ballistic from cy - bh/2
+    const px = cx + Math.cos(baseAngle) * speed * t;
+    const py = (cy - 70) + Math.sin(baseAngle) * speed * t + 0.5 * 600 * t * t;
+    if (py > H + 40) continue;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(t * (2 + (seed % 5)));
+    // Tiny popcorn piece
+    ctx.fillStyle = '#fff5d8';
+    for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * r * 0.4, Math.sin(a) * r * 0.4, r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255, 200, 80, 0.6)';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  celebrationBanner(ctx, ['POP-TASTIC!', 'kernels of pure joy'], t);
+}
+
+// Bubbles — a giant bubble ascends, then pops into a cascade of smaller ones.
+function drawBubblesCelebration(ctx, t) {
+  const cx = W * 0.5;
+  const popAt = 2.4;
+  if (t < popAt) {
+    // Rising giant bubble
+    const r = Math.min(W, H) * 0.18 * (0.6 + t / popAt * 0.7);
+    const y = H * 0.85 - (t / popAt) * H * 0.6;
+    ctx.save();
+    ctx.translate(cx, y);
+    // body
+    const body = ctx.createRadialGradient(-r * 0.25, -r * 0.3, r * 0.05, 0, 0, r);
+    body.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    body.addColorStop(0.6, 'rgba(190, 230, 255, 0.18)');
+    body.addColorStop(1, 'rgba(140, 190, 255, 0.4)');
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    // Sheen
+    ctx.globalCompositeOperation = 'screen';
+    const sheen = (sx, sy, sr, c) => {
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+      g.addColorStop(0, c + '90');
+      g.addColorStop(1, c + '00');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(sx, sy, sr, 0, Math.PI * 2); ctx.fill();
+    };
+    sheen( r * 0.25,  r * 0.20, r * 0.55, '#ff9eea');
+    sheen(-r * 0.30,  r * 0.10, r * 0.55, '#9eeaff');
+    sheen( r * 0.10, -r * 0.30, r * 0.50, '#fff09e');
+    ctx.globalCompositeOperation = 'source-over';
+    // rim
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = Math.max(2, r * 0.04);
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.97, 0, Math.PI * 2); ctx.stroke();
+    // catchlight
+    const cl = ctx.createRadialGradient(-r * 0.42, -r * 0.42, 0, -r * 0.42, -r * 0.42, r * 0.42);
+    cl.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    cl.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = cl;
+    ctx.beginPath(); ctx.arc(-r * 0.42, -r * 0.42, r * 0.42, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  } else {
+    // Lots of small bubbles ascending after the pop
+    const elapsed = t - popAt;
+    for (let i = 0; i < 60; i++) {
+      const seed = i * 53;
+      const sx = (i * 137) % W;
+      const speed = 180 + (Math.sin(seed) + 1) * 80;
+      const sy = H + 30 - elapsed * speed - ((i * 19) % 80);
+      if (sy < -40) continue;
+      const wobble = Math.sin(t * 2 + i) * 18;
+      const r = 8 + (Math.cos(seed) + 1) * 14;
+      ctx.save();
+      ctx.translate(sx + wobble, sy);
+      ctx.fillStyle = 'rgba(220, 240, 255, 0.45)';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.beginPath(); ctx.arc(-r * 0.4, -r * 0.4, r * 0.18, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  celebrationBanner(ctx, ['BEAUTIFUL!', 'bubbly, bubbly, bubbly'], t);
+}
+
+// Soccer — a goal! "GOOOAL!" with the ball flying into a net.
+function drawSoccerCelebration(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.55;
+  // Net shape (arc + grid lines)
+  ctx.save();
+  ctx.translate(cx, cy);
+  const nw = Math.min(W, H) * 0.42;
+  const nh = nw * 0.6;
+  // Net outline
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(-nw / 2, -nh / 2);
+  ctx.lineTo(-nw / 2, nh / 2);
+  ctx.lineTo(nw / 2, nh / 2);
+  ctx.lineTo(nw / 2, -nh / 2);
+  ctx.stroke();
+  // Net mesh
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 12; i++) {
+    const x = -nw / 2 + (i / 12) * nw;
+    ctx.beginPath();
+    ctx.moveTo(x, -nh / 2); ctx.lineTo(x, nh / 2);
+    ctx.stroke();
+  }
+  for (let i = 1; i < 8; i++) {
+    const y = -nh / 2 + (i / 8) * nh;
+    ctx.beginPath();
+    ctx.moveTo(-nw / 2, y); ctx.lineTo(nw / 2, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // Soccer ball flying in (from left, into the net)
+  const intro = Math.min(1, t / 0.6);
+  const ballX = -100 + intro * (cx + 0);
+  const ballY = cy + Math.sin(intro * Math.PI) * -120;
+  const ballR = 50;
+  ctx.save();
+  ctx.translate(ballX, ballY);
+  ctx.rotate(t * 6);
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(0, 0, ballR, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a) * ballR * 0.55, Math.sin(a) * ballR * 0.55, ballR * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(0, 0, ballR * 0.22, 0, Math.PI * 2); ctx.fill();
+  storybookOutline(ctx, ballR, 66004);
+  ctx.restore();
+  // Streak lines behind ball
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(ballX - 60 - i * 30, ballY + (i - 1.5) * 8);
+    ctx.lineTo(ballX - 30 - i * 30, ballY + (i - 1.5) * 8);
+    ctx.stroke();
+  }
+  celebrationBanner(ctx, ['G O O O A L!', 'voices of champions'], t);
+}
+
+// Tennis — trophy raised high, with confetti.
+function drawTennisCelebration(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.6;
+  const intro = Math.min(1, t / 0.5);
+  const scale = intro * intro * (3 - 2 * intro);
+  const lift = Math.sin(t * 2) * 8;
+  ctx.save();
+  ctx.translate(cx, cy + lift);
+  ctx.scale(scale, scale);
+  // Trophy cup
+  const trophyG = ctx.createLinearGradient(0, -120, 0, 80);
+  trophyG.addColorStop(0, '#fff1a8');
+  trophyG.addColorStop(0.4, '#ffd93d');
+  trophyG.addColorStop(1, '#a87800');
+  ctx.fillStyle = trophyG;
+  ctx.beginPath();
+  ctx.moveTo(-90, -110);
+  ctx.lineTo(90, -110);
+  ctx.bezierCurveTo(95, 30, 70, 30, 60, 35);
+  ctx.lineTo(-60, 35);
+  ctx.bezierCurveTo(-70, 30, -95, 30, -90, -110);
+  ctx.closePath();
+  ctx.fill();
+  // Cup handles
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = '#ffd93d';
+  ctx.beginPath(); ctx.arc(-110, -50, 35, -Math.PI * 0.2, Math.PI * 0.6); ctx.stroke();
+  ctx.beginPath(); ctx.arc(110, -50, 35, Math.PI - Math.PI * 0.6, Math.PI + Math.PI * 0.2); ctx.stroke();
+  // Stem & base
+  ctx.fillStyle = '#c89018';
+  ctx.fillRect(-30, 35, 60, 50);
+  ctx.fillRect(-80, 80, 160, 25);
+  ctx.fillRect(-100, 100, 200, 18);
+  // Star on the cup
+  ctx.fillStyle = '#ffffff';
+  ctx.save();
+  ctx.translate(0, -50);
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const rr = i % 2 === 0 ? 28 : 14;
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // Outline
+  ctx.strokeStyle = '#3a2008';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-90, -110);
+  ctx.lineTo(90, -110);
+  ctx.bezierCurveTo(95, 30, 70, 30, 60, 35);
+  ctx.lineTo(-60, 35);
+  ctx.bezierCurveTo(-70, 30, -95, 30, -90, -110);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+  celebrationBanner(ctx, ['CHAMPIONS!', 'game, set, sing'], t);
+}
+
+// Classic — balls swirl into a giant smiley face.
+function drawClassicCelebration(ctx, t) {
+  const cx = W * 0.5, cy = H * 0.55;
+  const r = Math.min(W, H) * 0.22;
+  const intro = Math.min(1, t / 0.5);
+  const scale = intro * intro * (3 - 2 * intro);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  // Yellow happy face
+  const grad = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.05, 0, 0, r);
+  grad.addColorStop(0, '#fffacb');
+  grad.addColorStop(0.5, '#ffd93d');
+  grad.addColorStop(1, '#946800');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#1a1a1a';
+  const blink = Math.max(0, 1 - Math.abs(t - 3.0) * 6);
+  const eyeOpenY = 1 - blink;
+  ctx.save();
+  ctx.translate(-r * 0.32, -r * 0.20);
+  ctx.scale(1, eyeOpenY);
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.translate(r * 0.32, -r * 0.20);
+  ctx.scale(1, eyeOpenY);
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // Smile
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = Math.max(4, r * 0.10);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(0, r * 0.05, r * 0.55, 0.2, Math.PI - 0.2);
+  ctx.stroke();
+  storybookOutline(ctx, r, 55005);
+  ctx.restore();
+  celebrationBanner(ctx, ['SUPERSTARS!', 'you sang it perfectly'], t);
+}
+
+function drawCelebration(ctx, dt) {
+  celebration.t += dt;
+  // Soft warm overlay so the celebration reads
+  ctx.fillStyle = 'rgba(250, 240, 215, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+  const t = celebration.t;
+  switch (celebration.mode) {
+    case 'eyeball':    drawCyclops(ctx, t); break;
+    case 'watermelon': drawWatermelon(ctx, t); break;
+    case 'popcorn':    drawPopcorn(ctx, t); break;
+    case 'soapbubble': drawBubblesCelebration(ctx, t); break;
+    case 'soccer':     drawSoccerCelebration(ctx, t); break;
+    case 'tennis':     drawTennisCelebration(ctx, t); break;
+    default:           drawClassicCelebration(ctx, t); break;
+  }
+  // Periodic confetti bursts during the celebration
+  if (Math.floor(t * 2) !== Math.floor((t - dt) * 2)) {
+    const x = Math.random() * W;
+    const y = H * (0.3 + Math.random() * 0.5);
+    for (let i = 0; i < 18; i++) {
+      confetti.push(new Confetti(x, y, COLORS[Math.floor(Math.random() * COLORS.length)]));
+    }
+  }
+  if (t >= celebration.duration) endCelebration();
+}
+
+// ===== Main loop =====
+let lastFrameTime = 0;
+// Rolling peak of the raw (un-amplified) mic signal — used by auto-sens to
+// scale the slider so the loudest recent sound maps to ~70% loudness.
+// Floored at 0.04 so silence doesn't crank sensitivity to the moon.
+let rollingPeakRaw = 0.1;
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+  lastFrameTime = now;
+
+  const planet = PLANETS[state.planet];
+  const raw = getLoudness();
+
+  // Track the room's ambient noise floor — slow up, faster down so quiet
+  // moments pull the floor down quickly, and a sudden loud noise barely
+  // raises it. Used by the auto-sens noise gate.
+  if (lastRawRms < noiseFloor) {
+    noiseFloor += (lastRawRms - noiseFloor) * Math.min(1, dt * 4);
+  } else {
+    noiseFloor += (lastRawRms - noiseFloor) * Math.min(1, dt * 0.06);
+  }
+
+  // Auto-sensitivity: only ratchets UPWARDS — when recent peaks aren't
+  // reaching satisfying loudness, raise sensitivity so a normal singing
+  // voice fills the meter. We deliberately never auto-lower sensitivity:
+  // if the kids really crush a song, the output stays pinned at 1.0
+  // (max chaos) rather than being normalized down to "average".
+  // Adjusts only when there's current real signal so silence between
+  // songs can't drift the gain up.
+  rollingPeakRaw = Math.max(rollingPeakRaw * Math.pow(0.985, dt * 60), lastEffectiveRms, 0.03);
+  if (state.autoSensitivity && lastEffectiveRms > 0.008) {
+    const scaledPeak = rollingPeakRaw * state.sensitivity;
+    if (scaledPeak < 0.55) {
+      const targetSens = 0.7 / Math.max(rollingPeakRaw, 0.01);
+      state.sensitivity += (targetSens - state.sensitivity) * Math.min(1, dt * 0.6);
+      state.sensitivity = Math.max(0.5, Math.min(25, state.sensitivity));
+      sensSlider.value = state.sensitivity;
+      sensVal.textContent = state.sensitivity.toFixed(1) + 'x';
+    }
+  }
+
+  smoothedLoudness += (raw - smoothedLoudness) * Math.min(1, dt * 15);
+  peakLoudness = Math.max(peakLoudness * Math.pow(0.92, dt * 60), raw);
+
+  meterFill.style.width = (smoothedLoudness * 100) + '%';
+
+  drawBackground(planet, dt);
+
+  // Trebuchet mode takes over the screen — no balls/spawning/splat/confetti.
+  if (state.ballMode === 'trebuchet') {
+    trebUpdate(dt, raw, smoothedLoudness, peakLoudness);
+    updateFinishBtn();
+    trebDraw(ctx, dt);
+    applyPaperOverlay(ctx);
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  // Glow rings on loud
+  if (smoothedLoudness > 0.3) {
+    for (let r = 0; r < 3; r++) {
+      ctx.beginPath();
+      ctx.arc(W/2, H/2, 100 + r * 80 + smoothedLoudness * 40, 0, Math.PI * 2);
+      ctx.strokeStyle = COLORS[Math.floor((Date.now()/200 + r) % COLORS.length)];
+      ctx.globalAlpha = smoothedLoudness * 0.12;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ===== Dynamic ball count =====
+  // When locked: target = exact slider value.
+  // When unlocked: slider value is the MIN. Count grows from there with loudness,
+  // up to the slider's max ceiling.
+  let targetCount;
+  // Soap bubbles always scale with loudness (more singing → more bubbles
+  // blow in), regardless of the lock.
+  if (state.ballMode === 'soapbubble' || !state.ballCountLock) {
+    const lvl = Math.max(smoothedLoudness, peakLoudness * 0.6);
+    const min = state.ballCount;
+    const ceiling = parseInt(countSlider.max, 10);
+    targetCount = Math.round(min + (ceiling - min) * Math.min(1, lvl * 1.4));
+  } else {
+    targetCount = state.ballCount;
+  }
+  spawnAcc += dt;
+  // Bubbles spawn faster so a loud burst visibly multiplies them.
+  const spawnInterval = state.ballMode === 'soapbubble' ? 0.04 : 0.1;
+  if (spawnAcc > spawnInterval) {
+    const active = balls.reduce((n, b) => n + (b.dormant ? 0 : 1), 0);
+    if (active < targetCount) {
+      // Prefer waking a dormant ball (still on screen) before spawning a new one
+      if (!wakeOne()) spawnFromSide();
+      spawnAcc = 0;
+    } else if (active > targetCount) {
+      sendOneAway();
+      spawnAcc = 0;
+    }
+  }
+
+  // Use peak loudness so a quick "AHH!" still launches balls that hit the floor
+  // a moment later, before the spike decays.
+  const launchLoudness = Math.max(raw, peakLoudness * 0.7);
+  for (const b of balls) {
+    b.update(dt, planet, state.restitution, launchLoudness, state.ballMode);
+    if (!b.splatted) b.draw(ctx, state.ballMode);
+  }
+  // Remove splatted balls (they get replaced by the dynamic spawn system next tick)
+  balls = balls.filter(b => !b.splatted);
+  // Remove dormant balls that have rolled fully off-screen
+  balls = balls.filter(b => !(b.dormant && (b.x < -b.radius * 2 - 60 || b.x > W + b.radius * 2 + 60)));
+
+  // Update + draw splats
+  for (let i = splats.length - 1; i >= 0; i--) {
+    splats[i].update(dt, planet);
+    splats[i].draw(ctx);
+    if (splats[i].done) splats.splice(i, 1);
+  }
+
+  spawnConfetti(smoothedLoudness);
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    confetti[i].update(dt, planet);
+    confetti[i].draw(ctx);
+    if (confetti[i].life <= 0 || confetti[i].y > H + 50) confetti.splice(i, 1);
+  }
+
+  showEncouragement(smoothedLoudness);
+
+  // Celebration overlay (drawn before paper texture so it picks up the grain)
+  if (celebration.active) drawCelebration(ctx, dt);
+
+  // Storybook finishing pass — warm paper grain over everything.
+  applyPaperOverlay(ctx);
+
+  requestAnimationFrame(loop);
+}
+
+// ===== Settings UI wiring =====
+function buildModeButtons(containerId, options, currentKey, onSelect) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  for (const [key, label] of Object.entries(options)) {
+    const btn = document.createElement('button');
+    btn.className = 'modeBtn' + (key === currentKey ? ' active' : '');
+    btn.textContent = label;
+    btn.dataset.key = key;
+    btn.onclick = () => {
+      onSelect(key);
+      [...container.children].forEach(c => c.classList.toggle('active', c.dataset.key === key));
+    };
+    container.appendChild(btn);
+  }
+}
+buildModeButtons('ballModes', BALL_MODES, state.ballMode, (k) => {
+  const prev = state.ballMode;
+  state.ballMode = k;
+  // When switching into or out of bubble mode, reseed so balls start in
+  // a sensible state (bubbles scattered + rising, others on the floor).
+  if (k === 'soapbubble' || prev === 'soapbubble') {
+    seedBalls(state.ballCount);
+  }
+  // Switching INTO trebuchet starts a fresh game; switching OUT resets too
+  // so it's ready next time.
+  if (k === 'trebuchet' || prev === 'trebuchet') trebReset();
+  updateFinishBtn();
+});
+
+// Trebuchet: click anywhere on the canvas hits the on-screen button. Space
+// also releases / resets, so kids can mash any key.
+canvas.addEventListener('click', (e) => {
+  if (state.ballMode !== 'trebuchet') return;
+  const rect = canvas.getBoundingClientRect();
+  trebHandleClick(e.clientX - rect.left, e.clientY - rect.top);
+});
+window.addEventListener('keydown', (e) => {
+  if (state.ballMode !== 'trebuchet') return;
+  if (e.code !== 'Space' && e.code !== 'Enter') return;
+  e.preventDefault();
+  if (treb.phase === 'cocking') trebFire();
+  else if (treb.phase === 'landed' || treb.phase === 'broken') trebReset();
+});
+buildModeButtons(
+  'planetModes',
+  Object.fromEntries(Object.entries(PLANETS).map(([k, v]) => [k, v.name])),
+  state.planet,
+  (k) => state.planet = k
+);
+
+const sensSlider = document.getElementById('sensSlider');
+const sensVal = document.getElementById('sensVal');
+sensSlider.addEventListener('input', () => {
+  state.sensitivity = parseFloat(sensSlider.value);
+  sensVal.textContent = state.sensitivity.toFixed(1) + 'x';
+  // Manually moving the slider implies you want manual control.
+  if (state.autoSensitivity) {
+    state.autoSensitivity = false;
+    refreshAutoSensBtn();
+  }
+});
+
+const autoSensBtn = document.getElementById('autoSensBtn');
+function refreshAutoSensBtn() {
+  if (state.autoSensitivity) {
+    autoSensBtn.classList.add('locked');
+    autoSensBtn.textContent = 'Auto: matches the room';
+  } else {
+    autoSensBtn.classList.remove('locked');
+    autoSensBtn.textContent = 'Manual';
+  }
+}
+autoSensBtn.addEventListener('click', () => {
+  state.autoSensitivity = !state.autoSensitivity;
+  refreshAutoSensBtn();
+});
+refreshAutoSensBtn();
+
+const countSlider = document.getElementById('countSlider');
+const countVal = document.getElementById('countVal');
+countSlider.addEventListener('input', () => {
+  state.ballCount = parseInt(countSlider.value, 10);
+  countVal.textContent = state.ballCount;
+  // The main loop handles smoothly spawning or sending balls away.
+});
+
+const lockBtn = document.getElementById('lockBtn');
+function refreshLockBtn() {
+  if (state.ballCountLock) {
+    lockBtn.classList.add('locked');
+    lockBtn.textContent = 'Locked at fixed count';
+  } else {
+    lockBtn.classList.remove('locked');
+    lockBtn.textContent = 'Auto: grows with loudness';
+  }
+}
+lockBtn.addEventListener('click', () => {
+  state.ballCountLock = !state.ballCountLock;
+  refreshLockBtn();
+});
+refreshLockBtn();
+
+const bounceSlider = document.getElementById('bounceSlider');
+const bounceVal = document.getElementById('bounceVal');
+bounceSlider.addEventListener('input', () => {
+  state.restitution = parseFloat(bounceSlider.value);
+  bounceVal.textContent = state.restitution.toFixed(2);
+});
+
+settingsToggle.addEventListener('click', () => {
+  settings.classList.toggle('hidden');
+});
+
+// Finish button does double duty:
+//   normal modes  → "Finish!"      → triggers the celebration
+//   trebuchet cocking → "Release!" → fires the trebuchet
+//   trebuchet landed  → "Throw Again" → resets the trebuchet
+//   trebuchet mid-flight → hidden (release in progress)
+const finishBtnEl = document.getElementById('finishBtn');
+function updateFinishBtn() {
+  if (state.ballMode === 'trebuchet') {
+    if (treb.phase === 'cocking') {
+      finishBtnEl.textContent = 'Release!';
+      finishBtnEl.classList.remove('hidden');
+    } else if (treb.phase === 'landed' || treb.phase === 'broken') {
+      finishBtnEl.textContent = 'Throw Again';
+      finishBtnEl.classList.remove('hidden');
+    } else {
+      finishBtnEl.classList.add('hidden');
+    }
+  } else {
+    finishBtnEl.textContent = 'Finish!';
+    // The normal mode show/hide rule (start screen, celebration, etc.) is
+    // handled elsewhere — leave that alone.
+  }
+}
+finishBtnEl.addEventListener('click', () => {
+  if (state.ballMode === 'trebuchet') {
+    if (treb.phase === 'cocking') trebFire();
+    else if (treb.phase === 'landed' || treb.phase === 'broken') trebReset();
+    return;
+  }
+  startCelebration();
+});
+</script>
+
+</body>
+</html>
