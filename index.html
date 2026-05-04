@@ -3189,20 +3189,20 @@ class Firework {
       '#ff6b6b', '#ffd93d', '#6bcf7f', '#4d96ff', '#c780ff',
       '#ff9f43', '#48dbfb', '#1dd1a1', '#feca57', '#ff6b9d',
     ];
-    const count = 44 + Math.floor(Math.random() * 18);
+    const count = 70 + Math.floor(Math.random() * 30);
     // Two-color burst — pick a primary + accent for each firework
     const primary = palette[Math.floor(Math.random() * palette.length)];
     const accent  = palette[Math.floor(Math.random() * palette.length)];
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2 + Math.random() * 0.25;
-      const speed = 220 + Math.random() * 480;
+      const speed = 320 + Math.random() * 620;
       this.particles.push({
         x: 0, y: 0,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 50, // slight upward bias
+        vy: Math.sin(angle) * speed - 80, // slight upward bias
         color: Math.random() < 0.7 ? primary : accent,
         life: 1,
-        size: 1.6 + Math.random() * 2.6,
+        size: 3 + Math.random() * 3.5,
         trail: [],
       });
     }
@@ -3230,11 +3230,12 @@ class Firework {
     ctx.translate(this.x, this.y);
     // Center flash on the burst frame
     if (this.flash > 0.05) {
-      const flashGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 80);
-      flashGrad.addColorStop(0, `rgba(255, 255, 230, ${this.flash * 0.95})`);
-      flashGrad.addColorStop(1, 'rgba(255, 220, 160, 0)');
+      const flashGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 160);
+      flashGrad.addColorStop(0, `rgba(255, 255, 255, ${this.flash})`);
+      flashGrad.addColorStop(0.4, `rgba(255, 240, 180, ${this.flash * 0.7})`);
+      flashGrad.addColorStop(1, 'rgba(255, 200, 120, 0)');
       ctx.fillStyle = flashGrad;
-      ctx.fillRect(-90, -90, 180, 180);
+      ctx.fillRect(-180, -180, 360, 360);
     }
     // Sparks with glowing trails
     ctx.globalCompositeOperation = 'lighter';
@@ -4677,18 +4678,22 @@ function loop(now) {
     if (splats[i].done) splats.splice(i, 1);
   }
 
-  // ===== FIREWORK eyeballs — when the kids really sustain a high volume, =====
-  // randomly pop one of the on-screen balls into a colorful starburst.
-  // Throttled so even at full volume you only get 2–3 per second of fireworks,
-  // not a continuous detonation that drowns out the bouncing.
-  if (smoothedLoudness > 0.82 && fireworkCooldown <= 0) {
+  // ===== FIREWORK eyeballs — kids singing loud occasionally pops one ball =====
+  // into a colorful starburst. Triggered by either a peak spike OR sustained
+  // loudness, so even short loud moments produce one. Throttled to keep some
+  // bouncing balls visible (we never explode them all at once).
+  const fireworkLevel = Math.max(peakLoudness, smoothedLoudness * 1.05);
+  if (fireworkLevel > 0.6 && fireworkCooldown <= 0) {
     const candidates = balls.filter(b => !b.dormant && !b.splatted);
-    if (candidates.length > 0) {
+    // Don't pop the LAST visible ball — keep at least one bouncing on screen
+    if (candidates.length >= 2 || (candidates.length === 1 && Math.random() < 0.4)) {
       const ball = candidates[Math.floor(Math.random() * candidates.length)];
       fireworks.push(new Firework(ball.x, ball.y));
       ball.splatted = true;          // dynamic-count system replaces it from the side
-      // Cooldown shorter when extremely loud so peaks really pop
-      fireworkCooldown = smoothedLoudness > 0.93 ? 0.22 : 0.4;
+      // Louder = faster cooldown so big moments produce a barrage
+      fireworkCooldown = fireworkLevel > 0.9 ? 0.28
+                       : fireworkLevel > 0.75 ? 0.5
+                       : 0.9;
     }
   }
   // Update + draw fireworks
