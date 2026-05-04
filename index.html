@@ -238,23 +238,6 @@
     border-color: transparent;
   }
 
-  /* Hint shown only on portrait phones in Trebuchet mode */
-  #rotateHint {
-    position: fixed;
-    bottom: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(20, 24, 50, 0.85);
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 999px;
-    font-size: 13px;
-    z-index: 25;
-    pointer-events: none;
-    backdrop-filter: blur(6px);
-    display: none;
-  }
-
   /* ===== Mobile / small-screen optimizations ===== */
   @media (max-width: 720px), (pointer: coarse) {
     body {
@@ -337,10 +320,6 @@
     #startScreen p  { font-size: clamp(14px, 4vw, 18px); padding: 0 16px; max-width: 90vw; }
   }
 
-  /* On portrait phones in trebuchet mode, suggest rotating */
-  @media (max-width: 720px) and (orientation: portrait) {
-    body.is-trebuchet #rotateHint { display: block; }
-  }
 </style>
 </head>
 <body>
@@ -359,7 +338,6 @@
 
 <button id="settingsToggle" title="Settings">&#9881;</button>
 <button id="finishBtn" class="hidden">Finish!</button>
-<div id="rotateHint">Tip: rotate your phone sideways for the trebuchet game</div>
 
 <div id="settings" class="hidden">
   <div class="group">
@@ -541,11 +519,18 @@ function trebArmAngle(cock, releaseT) {
 
 // Trebuchet pivot location and arm dimensions, as a function of canvas size.
 function trebGeom() {
-  const groundY = H * 0.85;
-  const baseHalf = Math.min(190, W * 0.105);   // half-width of the wooden A-frame base
-  const pivotX  = W * 0.5;                     // mid-screen so cocked arm has room going LEFT
-  const pivotY  = groundY - baseHalf * 1.55;   // top of A-frame
-  const longLen  = Math.min(440, W * 0.27);
+  // On portrait phones the screen is narrow, so scale the trebuchet much
+  // bigger relative to width — and use vertical room for the long arm.
+  const portrait = H > W;
+  const groundY = H * (portrait ? 0.78 : 0.85);
+  const baseHalf = portrait
+    ? Math.min(190, W * 0.20)
+    : Math.min(190, W * 0.105);
+  const pivotX = W * 0.5;                       // mid-screen so cocked arm has room going LEFT
+  const pivotY = groundY - baseHalf * 1.55;     // top of A-frame
+  const longLen = portrait
+    ? Math.min(440, Math.min(W * 0.5, H * 0.28))
+    : Math.min(440, W * 0.27);
   const shortLen = longLen * 0.42;
   return { groundY, baseHalf, pivotX, pivotY, longLen, shortLen };
 }
@@ -2195,24 +2180,35 @@ function trebDrawHUD(ctx, g) {
     ctx.fillStyle = '#fff8d6';
     ctx.fillText(txt, W / 2, 28);
   } else if (treb.phase === 'landed') {
-    // Big result + Throw Again button
-    ctx.font = '900 90px system-ui';
+    // Result text — for the Mayflower, sit at the top so the ship stays visible.
+    // Otherwise center it. Use a soft text-shadow instead of a heavy backdrop box.
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(20,14,6,0.55)';
-    roundRect(ctx, W / 2 - 360, H / 2 - 110, 720, 160, 22); ctx.fill();
+    const isMobile = Math.min(W, H) < 600;
+    const titleSize = isMobile ? Math.min(56, W * 0.10) : 90;
+    const subSize = isMobile ? 18 : 26;
+    const titleY = treb.sailing ? Math.max(60, H * 0.10) : H / 2 - 36;
+    const subY = titleY + (titleSize * 0.7);
+    // drop shadow for legibility against any background
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 2;
+    ctx.font = `900 ${titleSize}px system-ui`;
     ctx.fillStyle = '#ffd93d';
     if (treb.sailing) {
-      ctx.fillText('LANDED ON THE MAYFLOWER!', W / 2, H / 2 - 36);
-      ctx.font = '700 26px system-ui';
+      ctx.fillText('LANDED ON THE MAYFLOWER!', W / 2, titleY);
+      ctx.font = `700 ${subSize}px system-ui`;
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('Set sail for the New World — bon voyage!', W / 2, H / 2 + 24);
+      ctx.fillText('Set sail for the New World — bon voyage!', W / 2, subY);
     } else {
-      ctx.fillText(`${treb.distance} FEET!`, W / 2, H / 2 - 36);
-      ctx.font = '700 26px system-ui';
+      ctx.fillText(`${treb.distance} FEET!`, W / 2, titleY);
+      ctx.font = `700 ${subSize}px system-ui`;
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(distanceTagline(treb.distance), W / 2, H / 2 + 24);
+      ctx.fillText(distanceTagline(treb.distance), W / 2, subY);
     }
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
     // "Throw Again" lives on the top-left finish button now.
   }
 }
@@ -2283,7 +2279,12 @@ class Ball {
     // Wide size variation — small marbles to big beach balls.
     // Bias toward smaller, with occasional huge ones for variety.
     const t = Math.random();
-    this.radius = 14 + Math.pow(t, 1.6) * 95;
+    // On phones (any side under ~600px), bump everything bigger so the
+    // eyeballs are clearly visible and the bouncing reads from across the room.
+    const isMobile = Math.min(W, H) < 600;
+    const minR = isMobile ? 36 : 14;
+    const range = isMobile ? 110 : 95;
+    this.radius = minR + Math.pow(t, 1.6) * range;
     this.x = x;
     this.y = H - this.radius;
     this.vx = (Math.random() - 0.5) * 30;
@@ -4569,8 +4570,6 @@ function buildModeButtons(containerId, options, currentKey, onSelect) {
 buildModeButtons('ballModes', BALL_MODES, state.ballMode, (k) => {
   const prev = state.ballMode;
   state.ballMode = k;
-  // Toggle a body class so mobile-only CSS (rotate hint) can target this mode.
-  document.body.classList.toggle('is-trebuchet', k === 'trebuchet');
   // When switching into or out of bubble mode, reseed so balls start in
   // a sensible state (bubbles scattered + rising, others on the floor).
   if (k === 'soapbubble' || prev === 'soapbubble') {
@@ -4662,8 +4661,25 @@ bounceSlider.addEventListener('input', () => {
   bounceVal.textContent = state.restitution.toFixed(2);
 });
 
-settingsToggle.addEventListener('click', () => {
+settingsToggle.addEventListener('click', (e) => {
+  e.stopPropagation();
   settings.classList.toggle('hidden');
+});
+// Click anywhere outside the panel (or press Escape) to close it.
+// Clicks INSIDE the panel are stopped from bubbling so they don't close it.
+settings.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => {
+  if (!settings.classList.contains('hidden')) settings.classList.add('hidden');
+});
+document.addEventListener('touchstart', (e) => {
+  if (settings.classList.contains('hidden')) return;
+  if (settings.contains(e.target) || e.target === settingsToggle) return;
+  settings.classList.add('hidden');
+}, { passive: true });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !settings.classList.contains('hidden')) {
+    settings.classList.add('hidden');
+  }
 });
 
 // Finish button does double duty:
