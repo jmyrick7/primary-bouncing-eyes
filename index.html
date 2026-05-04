@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1f4e">
 <title>Sing Louder! Bouncing Balls</title>
 <style>
   html, body {
@@ -233,6 +237,110 @@
     font-weight: 700;
     border-color: transparent;
   }
+
+  /* Hint shown only on portrait phones in Trebuchet mode */
+  #rotateHint {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 24, 50, 0.85);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    z-index: 25;
+    pointer-events: none;
+    backdrop-filter: blur(6px);
+    display: none;
+  }
+
+  /* ===== Mobile / small-screen optimizations ===== */
+  @media (max-width: 720px), (pointer: coarse) {
+    body {
+      /* Avoid the iOS rubber-band scroll while playing */
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+    /* Tappable controls — min 44px target per Apple guidelines */
+    #settingsToggle {
+      width: 44px;
+      height: 44px;
+      font-size: 22px;
+      top: 10px;
+      right: 10px;
+    }
+    #finishBtn {
+      top: auto;
+      bottom: 12px;
+      left: 12px;
+      font-size: 14px;
+      padding: 10px 18px;
+      opacity: 0.92;
+    }
+    /* Volume meter — slim along the top so it doesn't crowd the canvas */
+    #meter {
+      top: 10px;
+      left: 64px;          /* clear of the gear button */
+      right: 64px;
+      width: auto;
+      height: 10px;
+    }
+    #meterLabel {
+      top: 24px;
+      left: 64px;
+      font-size: 10px;
+    }
+    #encourage {
+      font-size: clamp(28px, 9vw, 56px);
+    }
+    /* Settings panel slides up from the bottom as a sheet */
+    #settings {
+      top: auto;
+      right: 0;
+      left: 0;
+      bottom: 0;
+      width: auto;
+      max-height: 70vh;
+      border-radius: 16px 16px 0 0;
+      padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    #settings.hidden {
+      transform: translateY(100%);
+      opacity: 1;        /* slide instead of fade */
+    }
+    /* Bigger touch targets in the panel */
+    .modeBtn {
+      padding: 12px 6px;
+      font-size: 0.9rem;
+      min-height: 44px;
+    }
+    .modeGrid {
+      gap: 8px;
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .lockBtn {
+      padding: 12px;
+      font-size: 0.95rem;
+      min-height: 44px;
+    }
+    .sliderRow input[type=range] {
+      height: 32px;       /* easier to grab */
+    }
+    .sliderRow .val {
+      font-size: 1rem;
+    }
+    /* Start screen text scales for narrow screens */
+    #startScreen h1 { font-size: clamp(28px, 8vw, 56px); padding: 0 16px; }
+    #startScreen p  { font-size: clamp(14px, 4vw, 18px); padding: 0 16px; max-width: 90vw; }
+  }
+
+  /* On portrait phones in trebuchet mode, suggest rotating */
+  @media (max-width: 720px) and (orientation: portrait) {
+    body.is-trebuchet #rotateHint { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -251,6 +359,7 @@
 
 <button id="settingsToggle" title="Settings">&#9881;</button>
 <button id="finishBtn" class="hidden">Finish!</button>
+<div id="rotateHint">Tip: rotate your phone sideways for the trebuchet game</div>
 
 <div id="settings" class="hidden">
   <div class="group">
@@ -307,6 +416,10 @@ function resize() {
   H = canvas.height = window.innerHeight;
 }
 window.addEventListener('resize', resize);
+// iOS Safari occasionally lags resize on rotate; force one a moment later.
+window.addEventListener('orientationchange', () => {
+  setTimeout(resize, 250);
+});
 resize();
 
 // ===== Settings state =====
@@ -4456,6 +4569,8 @@ function buildModeButtons(containerId, options, currentKey, onSelect) {
 buildModeButtons('ballModes', BALL_MODES, state.ballMode, (k) => {
   const prev = state.ballMode;
   state.ballMode = k;
+  // Toggle a body class so mobile-only CSS (rotate hint) can target this mode.
+  document.body.classList.toggle('is-trebuchet', k === 'trebuchet');
   // When switching into or out of bubble mode, reseed so balls start in
   // a sensible state (bubbles scattered + rising, others on the floor).
   if (k === 'soapbubble' || prev === 'soapbubble') {
