@@ -448,8 +448,8 @@ const BALL_MODES = {
 //   'flying'    — the eyeball is airborne; camera follows it; benchmarks scroll past
 //   'landed'    — final distance shown; "Throw Again" button to reset
 const TREB = {
-  G_FT:  13,        // gravity in ft/s² (low → longer hang time, leisurely flight)
-  MAX_V: 200,       // ft/s at full charge → ~2500ft for 100%, into Logan/Sacred Grove range
+  G_FT:  13,        // gravity unit/s² (low → longer hang time, leisurely flight)
+  MAX_V: 220,       // unit/s at full charge → ~3000 mi for 100%, peaks ~4000 with overcharge
   CHARGE_RATE: 0.18, // charge per second at loudness=1.0 (a typical song should fully charge)
   RELEASE_DUR: 0.45, // seconds the whip animation takes
   RELEASE_AT: 0.62,  // releaseT at which the sling lets go (sling tip ≈ +45°)
@@ -1289,6 +1289,8 @@ function drawPioneerFigure(ctx, x, footY, height, bodyColor, headwearColor, bonn
 function drawMayflower(ctx, x, y, t = 0) {
   ctx.save();
   ctx.translate(x, y);
+  // Scale the entire ship + cyclops up so it's a proper landmark
+  ctx.scale(1.8, 1.8);
   // Hull (curved wooden body)
   const hull = ctx.createLinearGradient(0, -10, 0, 30);
   hull.addColorStop(0, '#8a5a2a');
@@ -2403,7 +2405,7 @@ function trebDrawFlight(ctx, g) {
     ctx.stroke();
     if (big) {
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText(`${f} ft`, x, g.groundY + 18);
+      ctx.fillText(`${f} mi`, x, g.groundY + 18);
     }
   }
 
@@ -2546,24 +2548,24 @@ function trebDrawHUD(ctx, g) {
       ctx.fill();
     }
   } else if (treb.phase === 'flying') {
-    // Distance counter — top-right, but offset left so it doesn't sit under the
-    // gear button (44px wide, 16px from right edge → need 70px clearance).
+    // Distance counter — TOP-CENTER, away from the volume meter (top-left) and
+    // gear button (top-right) so neither can ever cover it.
     const isMobile = Math.min(W, H) < 600;
     const fontSize = isMobile ? 36 : 52;
     const padX = 18, padY = 10;
-    const txt = `${Math.max(0, Math.round(treb.fx))} ft`;
+    const txt = `${Math.max(0, Math.round(treb.fx))} mi`;
     ctx.font = `900 ${fontSize}px system-ui`;
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const tw = ctx.measureText(txt).width;
     const boxW = tw + padX * 2;
     const boxH = fontSize + padY * 2;
-    const boxX = W - 76 - boxW;   // ← was W-16; pushed left to clear the gear
+    const boxX = W / 2 - boxW / 2;
     const boxY = 14;
     ctx.fillStyle = 'rgba(20,14,6,0.45)';
     roundRect(ctx, boxX, boxY, boxW, boxH, 12); ctx.fill();
     ctx.fillStyle = '#fff8d6';
-    ctx.fillText(txt, boxX + boxW - padX, boxY + padY);
+    ctx.fillText(txt, W / 2, boxY + padY);
   } else if (treb.phase === 'landed') {
     // Result text — for the Mayflower, sit at the top so the ship stays visible.
     // Otherwise center it. Use a soft text-shadow instead of a heavy backdrop box.
@@ -2586,7 +2588,7 @@ function trebDrawHUD(ctx, g) {
       ctx.fillStyle = '#ffffff';
       ctx.fillText('Set sail for the New World — bon voyage!', W / 2, subY);
     } else {
-      ctx.fillText(`${treb.distance} FEET!`, W / 2, titleY);
+      ctx.fillText(`${treb.distance} MILES!`, W / 2, titleY);
       ctx.font = `700 ${subSize}px system-ui`;
       ctx.fillStyle = '#ffffff';
       ctx.fillText(distanceTagline(treb.distance), W / 2, subY);
