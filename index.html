@@ -2479,18 +2479,24 @@ function trebDrawHUD(ctx, g) {
       popScale = 1 + Math.sin(p * Math.PI) * 0.32 * (1 - p * 0.5);
     }
     const isMobile = Math.min(W, H) < 600;
-    const baseFontSize = isMobile ? 36 : 56;
-    const fontSize = baseFontSize * popScale;
-    const textY = H - 70;
+    // PERCENTAGE — the big primary number (always centered, color-shifts with tier)
+    const pctFontSize = isMobile ? 56 : 80;
+    const pctY = isMobile ? H - 92 : H - 110;
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 20;
     ctx.shadowOffsetY = 3;
-    ctx.font = `900 ${fontSize}px system-ui`;
+    ctx.font = `900 ${pctFontSize}px system-ui`;
     ctx.fillStyle = tierData.color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(tierData.msg, W / 2, textY);
+    ctx.fillText(`${Math.round(treb.charge * 100)}%`, W / 2, pctY);
+    // TIER WORD — smaller subtitle below, pops in when it changes
+    const tierFontSize = (isMobile ? 18 : 26) * popScale;
+    ctx.font = `800 ${tierFontSize}px system-ui`;
+    ctx.fillStyle = tierData.color;
+    ctx.shadowBlur = 12;
+    ctx.fillText(tierData.msg, W / 2, pctY + (isMobile ? 38 : 56));
     ctx.restore();
 
     // === Slim progress bar — full-width-ish, very bottom of screen ===
@@ -2540,7 +2546,8 @@ function trebDrawHUD(ctx, g) {
       ctx.fill();
     }
   } else if (treb.phase === 'flying') {
-    // Distance counter — top-right corner so it never intersects the eyeball's arc.
+    // Distance counter — top-right, but offset left so it doesn't sit under the
+    // gear button (44px wide, 16px from right edge → need 70px clearance).
     const isMobile = Math.min(W, H) < 600;
     const fontSize = isMobile ? 36 : 52;
     const padX = 18, padY = 10;
@@ -2548,11 +2555,10 @@ function trebDrawHUD(ctx, g) {
     ctx.font = `900 ${fontSize}px system-ui`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
-    // Measure for box width
     const tw = ctx.measureText(txt).width;
     const boxW = tw + padX * 2;
     const boxH = fontSize + padY * 2;
-    const boxX = W - 16 - boxW;
+    const boxX = W - 76 - boxW;   // ← was W-16; pushed left to clear the gear
     const boxY = 14;
     ctx.fillStyle = 'rgba(20,14,6,0.45)';
     roundRect(ctx, boxX, boxY, boxW, boxH, 12); ctx.fill();
