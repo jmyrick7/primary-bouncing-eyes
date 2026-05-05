@@ -373,11 +373,16 @@
     <div class="modeGrid" id="planetModes"></div>
   </div>
 
+  <div class="group" id="projectileGroup">
+    <h3>Trebuchet Projectile</h3>
+    <div class="modeGrid" id="projectileModes"></div>
+  </div>
+
   <div class="group">
     <h3>Bounciness</h3>
     <div class="sliderRow">
-      <input type="range" id="bounceSlider" min="0.4" max="0.99" step="0.01" value="0.86">
-      <div class="val" id="bounceVal">0.78</div>
+      <input type="range" id="bounceSlider" min="0.4" max="0.99" step="0.01" value="0.92">
+      <div class="val" id="bounceVal">0.92</div>
     </div>
   </div>
 </div>
@@ -415,8 +420,9 @@ const state = {
   ballCount: 1,
   ballCountLock: false,
   ballMode: 'eyeball',
+  trebProjectile: 'eyeball',  // what the trebuchet flings (and what becomes the cyclops's eye)
   planet: 'earth',
-  restitution: 0.86,
+  restitution: 0.92,
 };
 
 // ===== Planets (gravity in px/s^2 plus visual style) =====
@@ -661,7 +667,7 @@ function trebUpdate(dt, raw, smoothed, peak) {
       } else {
         // Normal land splat
         const screen = trebFlightScreenPos();
-        splats.push(new Splat(screen.x, 76, 'eyeball', '#4d96ff'));
+        splats.push(new Splat(screen.x, 76, state.trebProjectile, '#4d96ff'));
       }
     }
   }
@@ -1290,7 +1296,7 @@ function drawMayflower(ctx, x, y, t = 0) {
   ctx.save();
   ctx.translate(x, y);
   // Scale the entire ship + cyclops up so it's a proper landmark
-  ctx.scale(1.8, 1.8);
+  ctx.scale(2.8, 2.8);
   // Hull (curved wooden body)
   const hull = ctx.createLinearGradient(0, -10, 0, 30);
   hull.addColorStop(0, '#8a5a2a');
@@ -1449,26 +1455,12 @@ function drawMayflower(ctx, x, y, t = 0) {
   ctx.fill();
   ctx.stroke();
   if (hasEye) {
-    // Sclera (white) — fills the socket
-    ctx.fillStyle = '#fdfcf2';
-    ctx.beginPath();
-    ctx.arc(cx, cdy - 17, 4.2, 0, Math.PI * 2);
-    ctx.fill();
-    // Iris (blue, matches the launched eyeball)
-    ctx.fillStyle = '#4d96ff';
-    ctx.beginPath();
-    ctx.arc(cx + 0.4, cdy - 16.6, 2.6, 0, Math.PI * 2);
-    ctx.fill();
-    // Pupil
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(cx + 0.4, cdy - 16.6, 1.3, 0, Math.PI * 2);
-    ctx.fill();
-    // Catchlight
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(cx - 0.6, cdy - 17.5, 0.7, 0, Math.PI * 2);
-    ctx.fill();
+    // Render whatever projectile was used as the cyclops's eye —
+    // tennis ball eye, watermelon eye, popcorn eye, etc.
+    ctx.save();
+    ctx.translate(cx, cdy - 17);
+    drawBall(ctx, 4.2, '#4d96ff', '#4d96ff', state.trebProjectile || 'eyeball', 0, 0, 7, 0);
+    ctx.restore();
   } else {
     // X stitch where the eye would be (lost-eye look)
     ctx.strokeStyle = '#3a1f0a';
@@ -1819,7 +1811,7 @@ function trebDrawBroken(ctx, g) {
       ctx.save();
       ctx.translate(p.cx, p.cy);
       ctx.rotate(p.rot);
-      drawBall(ctx, 32, '#4d96ff', '#4d96ff', 'eyeball', Math.PI / 2, 0, 7, 0);
+      drawBall(ctx, 32, '#4d96ff', '#4d96ff', state.trebProjectile, Math.PI / 2, 0, 7, 0);
       ctx.restore();
     } else if (p.type === 'concrete') {
       ctx.save();
@@ -2367,12 +2359,12 @@ function trebDrawTrebuchet(ctx, g) {
   ctx.lineTo(pouchX + 6, pouchY - 4);
   ctx.stroke();
 
-  // Eyeball in the sling pouch
+  // Projectile in the sling pouch — whatever the user picked
   const eyeR = 38;
   ctx.save();
   ctx.translate(pouchX, pouchY);
   ctx.rotate(theta * 0.4);
-  drawBall(ctx, eyeR, '#4d96ff', '#4d96ff', 'eyeball', 0, 0, 7, 0);
+  drawBall(ctx, eyeR, '#4d96ff', '#4d96ff', state.trebProjectile, 0, 0, 7, 0);
   ctx.restore();
 
 }
@@ -2436,13 +2428,13 @@ function trebDrawFlight(ctx, g) {
     ctx.fill();
   }
 
-  // The flying eyeball itself (rotates) — only drawn while in flight; once
-  // it lands, the splat replaces the visible eyeball.
+  // The flying projectile itself (rotates) — only drawn while in flight; once
+  // it lands, the splat replaces the visible ball.
   if (treb.phase === 'flying') {
     ctx.save();
     ctx.translate(eye.x, eye.y);
     ctx.rotate(treb.rotation);
-    drawBall(ctx, 76, '#4d96ff', '#4d96ff', 'eyeball', 0, 0, 7, 0);
+    drawBall(ctx, 76, '#4d96ff', '#4d96ff', state.trebProjectile, 0, 0, 7, 0);
     ctx.restore();
   }
   // (Sailing eyeball is now drawn as the cyclops's eye inside drawMayflower.)
@@ -5242,16 +5234,21 @@ function loop(now) {
   // Soap bubbles always scale with loudness (more singing → more bubbles
   // blow in), regardless of the lock.
   if (state.ballMode === 'soapbubble' || !state.ballCountLock) {
-    const lvl = Math.max(smoothedLoudness, peakLoudness * 0.6);
+    const lvl = Math.max(smoothedLoudness, peakLoudness * 0.7);
     const min = state.ballCount;
     const ceiling = parseInt(countSlider.max, 10);
-    targetCount = Math.round(min + (ceiling - min) * Math.min(1, lvl * 1.4));
+    // Steeper ramp — even moderate singing visibly fills the screen.
+    targetCount = Math.round(min + (ceiling - min) * Math.min(1, lvl * 2.2));
   } else {
     targetCount = state.ballCount;
   }
   spawnAcc += dt;
-  // Bubbles spawn faster so a loud burst visibly multiplies them.
-  const spawnInterval = state.ballMode === 'soapbubble' ? 0.04 : 0.1;
+  // Spawn faster when louder so a big moment visibly multiplies eyeballs.
+  // Bubbles always spawn quickly; everything else accelerates with volume.
+  const lvlForSpawn = Math.max(smoothedLoudness, peakLoudness * 0.6);
+  const spawnInterval = state.ballMode === 'soapbubble'
+    ? 0.04
+    : Math.max(0.04, 0.1 - lvlForSpawn * 0.08);
   if (spawnAcc > spawnInterval) {
     const active = balls.reduce((n, b) => n + (b.dormant ? 0 : 1), 0);
     if (active < targetCount) {
@@ -5304,30 +5301,8 @@ function loop(now) {
     sharks.length = 0;
   }
 
-  // ===== FIREWORK eyeballs — kids singing loud occasionally pops one ball =====
-  // into a colorful starburst. Triggered by either a peak spike OR sustained
-  // loudness, so even short loud moments produce one. Throttled to keep some
-  // bouncing balls visible (we never explode them all at once).
-  const fireworkLevel = Math.max(peakLoudness, smoothedLoudness * 1.05);
-  if (fireworkLevel > 0.6 && fireworkCooldown <= 0) {
-    const candidates = balls.filter(b => !b.dormant && !b.splatted);
-    // Don't pop the LAST visible ball — keep at least one bouncing on screen
-    if (candidates.length >= 2 || (candidates.length === 1 && Math.random() < 0.4)) {
-      const ball = candidates[Math.floor(Math.random() * candidates.length)];
-      fireworks.push(new Firework(ball.x, ball.y));
-      ball.splatted = true;          // dynamic-count system replaces it from the side
-      // Louder = faster cooldown so big moments produce a barrage
-      fireworkCooldown = fireworkLevel > 0.9 ? 0.28
-                       : fireworkLevel > 0.75 ? 0.5
-                       : 0.9;
-    }
-  }
-  // Update + draw fireworks
-  for (let i = fireworks.length - 1; i >= 0; i--) {
-    fireworks[i].update(dt, planet);
-    fireworks[i].draw(ctx);
-    if (fireworks[i].done) fireworks.splice(i, 1);
-  }
+  // (Firework eyeballs were removed — louder singing now just spawns more
+  // eyeballs through the dynamic count system below.)
 
   spawnConfetti(smoothedLoudness);
   for (let i = confetti.length - 1; i >= 0; i--) {
@@ -5375,6 +5350,20 @@ buildModeButtons('ballModes', BALL_MODES, state.ballMode, (k) => {
   // so it's ready next time.
   if (k === 'trebuchet' || prev === 'trebuchet') trebReset();
   updateFinishBtn();
+});
+
+// Trebuchet projectile picker — choose what the catapult flings.
+// Excludes 'soapbubble' (floats) and 'trebuchet' (recursive).
+const TREB_PROJECTILES = {
+  eyeball:    'Eyeball',
+  classic:    'Classic',
+  tennis:     'Tennis',
+  watermelon: 'Watermelon',
+  soccer:     'Soccer',
+  popcorn:    'Popcorn',
+};
+buildModeButtons('projectileModes', TREB_PROJECTILES, state.trebProjectile, (k) => {
+  state.trebProjectile = k;
 });
 
 // Trebuchet: click anywhere on the canvas hits the on-screen button. Space
