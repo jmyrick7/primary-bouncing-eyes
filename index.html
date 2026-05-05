@@ -373,11 +373,6 @@
     <div class="modeGrid" id="planetModes"></div>
   </div>
 
-  <div class="group" id="projectileGroup">
-    <h3>Trebuchet Projectile</h3>
-    <div class="modeGrid" id="projectileModes"></div>
-  </div>
-
   <div class="group">
     <h3>Bounciness</h3>
     <div class="sliderRow">
@@ -2458,31 +2453,6 @@ function trebDrawHUD(ctx, g) {
   // Charge meter — bottom of screen. Big tiered encouragement text that
   // pops in when it changes, slim glowing progress bar below.
   if (treb.phase === 'cocking') {
-    // === Top-center charge badge (always visible, can't be hidden by anything) ===
-    {
-      const isMobileTop = Math.min(W, H) < 600;
-      const fs = isMobileTop ? 36 : 52;
-      const padX = 18, padY = 10;
-      const pctTxt = `${Math.round(treb.charge * 100)}%`;
-      ctx.save();
-      ctx.font = `900 ${fs}px system-ui`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      const tw = ctx.measureText(pctTxt).width;
-      const boxW = tw + padX * 2;
-      const boxH = fs + padY * 2;
-      const boxX = W / 2 - boxW / 2;
-      const boxY = 14;
-      ctx.fillStyle = 'rgba(20,14,6,0.55)';
-      roundRect(ctx, boxX, boxY, boxW, boxH, 12); ctx.fill();
-      // Color the text by tier (white at 0%, gold at 100%, pink at danger)
-      const tIdx = trebChargeTier(treb.charge);
-      ctx.fillStyle = TREB_CHARGE_TIERS[tIdx].color;
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 6;
-      ctx.fillText(pctTxt, W / 2, boxY + padY);
-      ctx.restore();
-    }
     // === Tier message ===
     const tier = trebChargeTier(treb.charge);
     if (tier !== treb.chargeMsgTier) {
@@ -5352,19 +5322,6 @@ buildModeButtons('ballModes', BALL_MODES, state.ballMode, (k) => {
   updateFinishBtn();
 });
 
-// Trebuchet projectile picker — choose what the catapult flings.
-// Excludes 'soapbubble' (floats) and 'trebuchet' (recursive).
-const TREB_PROJECTILES = {
-  eyeball:    'Eyeball',
-  classic:    'Classic',
-  tennis:     'Tennis',
-  watermelon: 'Watermelon',
-  soccer:     'Soccer',
-  popcorn:    'Popcorn',
-};
-buildModeButtons('projectileModes', TREB_PROJECTILES, state.trebProjectile, (k) => {
-  state.trebProjectile = k;
-});
 
 // Trebuchet: click anywhere on the canvas hits the on-screen button. Space
 // also releases / resets, so kids can mash any key.
