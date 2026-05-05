@@ -475,7 +475,29 @@ const treb = {
   pieces: [],                 // wreckage pieces with physics during 'broken' phase
   birds: [],                  // crows perched on the barrel adding visual weight
   birdSpawnT: 0,              // throttle timer for spawning new birds
+  chargeMsgTier: -1,          // which encouragement tier is currently shown
+  chargeMsgChangedAt: 0,      // perf.now() when tier changed (drives pop animation)
 };
+
+// Encouragement tiers shown above the charge bar — the message changes and
+// pops in as the kids sing past each threshold.
+const TREB_CHARGE_TIERS = [
+  { min: 0.00, msg: 'Sing!',           color: '#ffffff' },
+  { min: 0.15, msg: 'Louder!',         color: '#fff8d6' },
+  { min: 0.35, msg: 'Keep going!',     color: '#ffe066' },
+  { min: 0.55, msg: 'GREAT singing!',  color: '#ffc94d' },
+  { min: 0.75, msg: 'ALMOST READY!',   color: '#ff9c4d' },
+  { min: 1.00, msg: 'POWER UP!',       color: '#ff6b6b' },
+  { min: 1.50, msg: 'OFF THE CHARTS!', color: '#ff4dd6' },
+  { min: 2.00, msg: 'DANGER ZONE!',    color: '#ff3838' },
+];
+function trebChargeTier(charge) {
+  let idx = 0;
+  for (let i = TREB_CHARGE_TIERS.length - 1; i >= 0; i--) {
+    if (charge >= TREB_CHARGE_TIERS[i].min) { idx = i; break; }
+  }
+  return idx;
+}
 function trebReset() {
   treb.phase = 'cocking';
   treb.charge = 0;
@@ -492,6 +514,8 @@ function trebReset() {
   treb.pieces = [];
   treb.birds = [];
   treb.birdSpawnT = 0;
+  treb.chargeMsgTier = -1;
+  treb.chargeMsgChangedAt = 0;
   splats.length = 0;          // clear pumpkin/eyeball pieces from prior throws
   fireworks.length = 0;       // clear any in-flight fireworks too
 }
@@ -578,31 +602,6 @@ function trebUpdate(dt, raw, smoothed, peak) {
       });
     }
   }
-  // Update bird positions whenever the trebuchet is on screen — they ride the
-  // barrel as it lifts during cocking, and stay perched briefly after release
-  // until the arm swings them off.
-  if (treb.phase === 'cocking' || treb.phase === 'releasing') {
-    const barrel = trebBarrelPos();
-    for (const b of treb.birds) {
-      b.flapPhase += dt * (b.perched ? 0.5 : 14);
-      if (!b.perched) {
-        const targetX = barrel.x + b.perchOffsetX;
-        const targetY = barrel.y + b.perchOffsetY;
-        const dx = targetX - b.x;
-        const dy = targetY - b.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 6) { b.perched = true; b.x = targetX; b.y = targetY; }
-        else {
-          const speed = 340;
-          b.x += (dx / d) * speed * dt;
-          b.y += (dy / d) * speed * dt;
-        }
-      } else {
-        b.x = barrel.x + b.perchOffsetX;
-        b.y = barrel.y + b.perchOffsetY;
-      }
-    }
-  }
   else if (treb.phase === 'releasing') {
     treb.releaseT += dt / TREB.RELEASE_DUR;
     // Sling lets go around the time the sling-tip is up-and-forward (~45°),
@@ -675,6 +674,32 @@ function trebUpdate(dt, raw, smoothed, peak) {
   else if (treb.phase === 'broken') {
     // Wreckage falls + tumbles + settles in real time
     updateBrokenPieces(dt);
+  }
+
+  // Bird positions — runs ALONGSIDE the phase logic above (not as part of the
+  // if/else-if chain). Birds ride the barrel as it lifts during cocking and
+  // stay perched briefly while the arm whips through release.
+  if (treb.phase === 'cocking' || treb.phase === 'releasing') {
+    const barrel = trebBarrelPos();
+    for (const b of treb.birds) {
+      b.flapPhase += dt * (b.perched ? 0.5 : 14);
+      if (!b.perched) {
+        const targetX = barrel.x + b.perchOffsetX;
+        const targetY = barrel.y + b.perchOffsetY;
+        const dx = targetX - b.x;
+        const dy = targetY - b.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 6) { b.perched = true; b.x = targetX; b.y = targetY; }
+        else {
+          const speed = 340;
+          b.x += (dx / d) * speed * dt;
+          b.y += (dy / d) * speed * dt;
+        }
+      } else {
+        b.x = barrel.x + b.perchOffsetX;
+        b.y = barrel.y + b.perchOffsetY;
+      }
+    }
   }
 }
 
@@ -2436,39 +2461,83 @@ function trebDrawFlight(ctx, g) {
 function trebDrawHUD(ctx, g) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  // Charge meter — bottom-center so it doesn't fight with the volume meter
-  // or finish button up top.
+  // Charge meter — bottom of screen. Big tiered encouragement text that
+  // pops in when it changes, slim glowing progress bar below.
   if (treb.phase === 'cocking') {
-    const w = Math.min(620, W * 0.5);
-    const h = 26;
-    const x = W / 2 - w / 2;
-    const y = H - 90;
-    // Label above the bar, centered
-    ctx.fillStyle = '#fff';
-    ctx.font = '800 20px system-ui';
+    // === Tier message ===
+    const tier = trebChargeTier(treb.charge);
+    if (tier !== treb.chargeMsgTier) {
+      treb.chargeMsgTier = tier;
+      treb.chargeMsgChangedAt = performance.now();
+    }
+    const tierData = TREB_CHARGE_TIERS[tier];
+    const tierAge = (performance.now() - treb.chargeMsgChangedAt) / 1000;
+    // Pop animation: overshoot then settle (≈0.5s total)
+    let popScale = 1;
+    if (tierAge < 0.5) {
+      const p = tierAge / 0.5;
+      popScale = 1 + Math.sin(p * Math.PI) * 0.32 * (1 - p * 0.5);
+    }
+    const isMobile = Math.min(W, H) < 600;
+    const baseFontSize = isMobile ? 36 : 56;
+    const fontSize = baseFontSize * popScale;
+    const textY = H - 70;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 3;
+    ctx.font = `900 ${fontSize}px system-ui`;
+    ctx.fillStyle = tierData.color;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`Sing to charge!  ${Math.round(treb.charge * 100)}%`, W / 2, y - 8);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    // Bar background
-    ctx.fillStyle = 'rgba(20, 14, 6, 0.55)';
-    roundRect(ctx, x - 8, y - 8, w + 16, h + 16, 14); ctx.fill();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-    roundRect(ctx, x, y, w, h, 12); ctx.fill();
-    // Fill
-    const fillW = w * Math.min(1, treb.charge / 1.0);
-    const cg = ctx.createLinearGradient(x, 0, x + w, 0);
-    cg.addColorStop(0, '#6bcf7f');
-    cg.addColorStop(0.6, '#ffd93d');
-    cg.addColorStop(1, '#ff6b6b');
-    ctx.fillStyle = cg;
-    roundRect(ctx, x, y, fillW, h, 12); ctx.fill();
-    // Overcharge zone past 100% glows
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tierData.msg, W / 2, textY);
+    ctx.restore();
+
+    // === Slim progress bar — full-width-ish, very bottom of screen ===
+    const barW = Math.min(900, W * 0.78);
+    const barH = isMobile ? 10 : 14;
+    const barX = W / 2 - barW / 2;
+    const barY = H - 28;
+    // Soft track shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    roundRect(ctx, barX - 3, barY - 3, barW + 6, barH + 6, barH);
+    ctx.fill();
+    // Track
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.13)';
+    roundRect(ctx, barX, barY, barW, barH, barH / 2);
+    ctx.fill();
+    // Fill (gradient — green → yellow → red)
+    const fillRatio = Math.min(1, treb.charge);
+    const fillW = barW * fillRatio;
+    if (fillW > 1) {
+      const cg = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      cg.addColorStop(0, '#6bcf7f');
+      cg.addColorStop(0.55, '#ffd93d');
+      cg.addColorStop(1, '#ff6b6b');
+      ctx.fillStyle = cg;
+      roundRect(ctx, barX, barY, fillW, barH, barH / 2);
+      ctx.fill();
+    }
+    // Pulse glow when nearing or past full
+    if (treb.charge > 0.85) {
+      const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 110);
+      ctx.save();
+      ctx.shadowColor = `rgba(255, 220, 80, ${0.5 + pulse * 0.4})`;
+      ctx.shadowBlur = 18 + pulse * 14;
+      ctx.fillStyle = `rgba(255, 240, 160, ${0.18 + pulse * 0.22})`;
+      roundRect(ctx, barX, barY, fillW, barH, barH / 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Overcharge band — hot pink streak past 100%
     if (treb.charge > 1.0) {
-      const ow = w * Math.min(0.5, (treb.charge - 1.0));
-      ctx.fillStyle = 'rgba(255, 235, 120, 0.6)';
-      roundRect(ctx, x + w - ow, y, ow, h, 12); ctx.fill();
+      const ow = barW * Math.min(0.5, (treb.charge - 1.0) * 0.35);
+      const hotG = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      hotG.addColorStop(0, 'rgba(255, 140, 60, 0)');
+      hotG.addColorStop(1, 'rgba(255, 80, 220, 0.85)');
+      ctx.fillStyle = hotG;
+      roundRect(ctx, barX + barW - ow, barY, ow, barH, barH / 2);
+      ctx.fill();
     }
   } else if (treb.phase === 'flying') {
     // Distance counter — top-right corner so it never intersects the eyeball's arc.
