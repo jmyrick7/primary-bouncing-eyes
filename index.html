@@ -68,6 +68,65 @@
   }
   .bigBtn:hover { transform: scale(1.05); }
 
+  #gamePicker {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 20px 0;
+    max-width: 1100px;
+  }
+  .gameCard {
+    position: relative;
+    width: 280px;
+    padding: 28px 22px 24px;
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 22px;
+    background: linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+    color: white;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    text-align: center;
+    font-family: inherit;
+  }
+  .gameCard:hover {
+    transform: translateY(-6px) scale(1.03);
+    border-color: rgba(255,217,61,0.85);
+    box-shadow: 0 12px 36px rgba(255, 200, 60, 0.35);
+  }
+  .gameCard[data-game="trebuchet"] {
+    background: linear-gradient(160deg, rgba(255,180,80,0.18), rgba(220,80,60,0.10));
+    border-color: rgba(255,200,80,0.55);
+  }
+  .gameCard[data-game="dunk"] {
+    background: linear-gradient(160deg, rgba(255,90,90,0.15), rgba(255,170,40,0.10));
+    border-color: rgba(255,140,80,0.45);
+  }
+  .gameEmoji { font-size: 64px; line-height: 1; margin-bottom: 8px; }
+  .gameTitle { font-size: 1.6rem; font-weight: 800; margin: 6px 0 8px; letter-spacing: 0.5px; }
+  .gameDesc  { font-size: 0.98rem; opacity: 0.88; line-height: 1.4; }
+  .gameBadge {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: linear-gradient(90deg, #ffd93d, #ff6b6b);
+    color: #1a1f4e;
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+  }
+  .gameBadge.new { background: linear-gradient(90deg, #6bcf7f, #4d96ff); color: white; }
+  .micNote { font-size: 0.85rem; opacity: 0.6; margin: 14px 0 0; }
+
+  @media (max-width: 720px) {
+    #gamePicker { gap: 12px; }
+    .gameCard { width: min(320px, 88vw); padding: 20px 18px 18px; }
+    .gameEmoji { font-size: 48px; }
+    .gameTitle { font-size: 1.3rem; }
+    .gameDesc  { font-size: 0.92rem; }
+  }
+
   #meter {
     position: fixed;
     top: 16px;
@@ -330,9 +389,28 @@
 <body>
 
 <div id="startScreen">
-  <h1>Sing Louder, Bounce Higher!</h1>
-  <p>Click the button, then allow microphone access. The louder the kids sing, the higher the balls bounce!</p>
-  <button id="startBtn" class="bigBtn">Start the Fun!</button>
+  <h1>Sing Louder!</h1>
+  <p>Pick a game. The louder the kids sing, the bigger the show.</p>
+  <div id="gamePicker">
+    <button class="gameCard" data-game="trebuchet">
+      <div class="gameEmoji">🏰</div>
+      <div class="gameTitle">Trebuchet</div>
+      <div class="gameDesc">Crank back the catapult and launch the eyeball across the world.</div>
+      <div class="gameBadge">Crowd Favorite</div>
+    </button>
+    <button class="gameCard" data-game="dunk">
+      <div class="gameEmoji">🏀</div>
+      <div class="gameTitle">Dunk Contest</div>
+      <div class="gameDesc">Pump up MJ and the crowd. Crazier dunks the louder you go.</div>
+      <div class="gameBadge new">NEW</div>
+    </button>
+    <button class="gameCard" data-game="eyeball">
+      <div class="gameEmoji">👁️</div>
+      <div class="gameTitle">Bouncing Eyeballs</div>
+      <div class="gameDesc">Sing and they bounce, blink, splat, and multiply.</div>
+    </button>
+  </div>
+  <p class="micNote">You'll be asked to allow microphone access. Works best in Chrome or Safari.</p>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -348,7 +426,7 @@
   <div class="group">
     <h3>Mic Sensitivity</h3>
     <div class="sliderRow">
-      <input type="range" id="sensSlider" min="0.5" max="25" step="0.1" value="3">
+      <input type="range" id="sensSlider" min="0.1" max="25" step="0.1" value="3">
       <div class="val" id="sensVal">2.5x</div>
     </div>
     <button id="autoSensBtn" class="lockBtn">Manual</button>
@@ -388,7 +466,6 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const meterFill = document.getElementById('meterFill');
 const encourage = document.getElementById('encourage');
-const startBtn = document.getElementById('startBtn');
 const startScreen = document.getElementById('startScreen');
 const settingsToggle = document.getElementById('settingsToggle');
 const settings = document.getElementById('settings');
@@ -432,14 +509,15 @@ const PLANETS = {
 
 // ===== Ball modes =====
 const BALL_MODES = {
+  trebuchet:  'Trebuchet (game)',
+  dunk:       'Dunk Contest (game)',
+  eyeball:    'Eyeballs',
   classic:    'Classic',
   soccer:     'Soccer',
-  eyeball:    'Eyeballs',
   watermelon: 'Watermelon',
   tennis:     'Tennis',
   popcorn:    'Popcorn',
   soapbubble: 'Bubbles',
-  trebuchet:  'Trebuchet (game)',
 };
 
 // ===== Trebuchet game =====
@@ -2635,6 +2713,705 @@ function trebHandleClick(mx, my) {
   return false;
 }
 
+// ============================================================
+// ===== Dunk Contest game =====
+// Phases:
+//   'pumping'  — singing pumps charge; MJ stretches, boombox bumps, crowd hypes
+//   'running'  — MJ sprints toward the free-throw line
+//   'jumping'  — arcs from FT line up to the rim
+//   'dunking'  — tier-specific dunk animation at the rim
+//   'landing'  — falls back to court
+//   'landed'   — final result + "Throw Again" button
+// ============================================================
+const dunk = {
+  phase: 'pumping',
+  charge: 0,
+  msgTier: -1,
+  msgChangedAt: 0,
+  runT: 0, jumpT: 0, dunkT: 0, landT: 0,
+  tier: 0,            // 0=miss, 1=barely, 2=windmill, 3=backflip, 4=stuck
+  mjSwagT: 0,         // stretch animation phase
+  hype: 0,            // 0..1 crowd intensity (eased)
+  bumpT: 0,           // boombox pulse phase
+};
+
+const DUNK = {
+  CHARGE_RATE: 0.32,
+  RUN_DUR: 1.0,
+  JUMP_DUR: 0.9,
+  DUNK_DURS: [1.0, 1.0, 1.4, 2.0, 1.5],   // per-tier durations
+  LAND_DUR: 0.9,
+};
+
+const DUNK_TIERS = [
+  { min: 0.00, msg: 'Warm up!',           color: '#ffffff' },
+  { min: 0.15, msg: 'Sing it!',           color: '#fff8d6' },
+  { min: 0.35, msg: 'Pump him up!',       color: '#ffe066' },
+  { min: 0.55, msg: 'STRETCH MODE',       color: '#ffc94d' },
+  { min: 0.75, msg: 'CROWD GOING WILD!',  color: '#ff9c4d' },
+  { min: 1.00, msg: 'BARELY MAKES IT!',   color: '#6bcf7f' },
+  { min: 1.50, msg: 'WINDMILL TIME!',     color: '#ffd93d' },
+  { min: 2.00, msg: 'BACKFLIP DUNK!',     color: '#ff6b6b' },
+  { min: 2.50, msg: 'STUCK IN THE HOOP!', color: '#ff4dd6' },
+];
+function dunkChargeTier(charge) {
+  let idx = 0;
+  for (let i = DUNK_TIERS.length - 1; i >= 0; i--) {
+    if (charge >= DUNK_TIERS[i].min) { idx = i; break; }
+  }
+  return idx;
+}
+
+function dunkGeom() {
+  const groundY  = H * 0.82;
+  const isMobile = Math.min(W, H) < 600;
+  const hoopRimX = W * 0.80;
+  const hoopRimY = groundY - (isMobile ? 220 : Math.min(380, H * 0.46));
+  const hoopRimR = isMobile ? 28 : 46;
+  const ftLineX  = W * 0.52;
+  const startX   = W * 0.20;
+  const boomX    = W * 0.08;
+  return { groundY, hoopRimX, hoopRimY, hoopRimR, ftLineX, startX, boomX, isMobile };
+}
+
+function dunkReset() {
+  dunk.phase = 'pumping';
+  dunk.charge = 0;
+  dunk.runT = dunk.jumpT = dunk.dunkT = dunk.landT = 0;
+  dunk.tier = 0;
+  dunk.msgTier = -1;
+  dunk.msgChangedAt = 0;
+  dunk.mjSwagT = 0;
+  dunk.hype = 0;
+  dunk.bumpT = 0;
+  splats.length = 0;
+}
+
+function dunkFire() {
+  if (dunk.phase !== 'pumping') return false;
+  if (dunk.charge < 0.05) return false;
+  let tier = 0;
+  if (dunk.charge >= 2.50) tier = 4;
+  else if (dunk.charge >= 2.00) tier = 3;
+  else if (dunk.charge >= 1.50) tier = 2;
+  else if (dunk.charge >= 1.00) tier = 1;
+  dunk.tier = tier;
+  dunk.phase = 'running';
+  dunk.runT = 0;
+  return true;
+}
+
+function dunkUpdate(dt, raw, smoothed, peak) {
+  const drive = Math.max(smoothed, peak * 0.6);
+  dunk.hype  += (drive - dunk.hype) * Math.min(1, dt * 3.5);
+  dunk.mjSwagT += dt * (0.6 + dunk.charge * 0.8);
+  dunk.bumpT += dt * (3 + dunk.charge * 4);
+
+  if (dunk.phase === 'pumping') {
+    dunk.charge += drive * DUNK.CHARGE_RATE * dt;
+    dunk.charge = Math.min(2.6, dunk.charge);
+  }
+  else if (dunk.phase === 'running')  { dunk.runT  += dt / DUNK.RUN_DUR;  if (dunk.runT  >= 1) { dunk.runT  = 1; dunk.phase = 'jumping'; dunk.jumpT = 0; } }
+  else if (dunk.phase === 'jumping')  { dunk.jumpT += dt / DUNK.JUMP_DUR; if (dunk.jumpT >= 1) { dunk.jumpT = 1; dunk.phase = 'dunking'; dunk.dunkT = 0; } }
+  else if (dunk.phase === 'dunking')  {
+    dunk.dunkT += dt / DUNK.DUNK_DURS[dunk.tier];
+    if (dunk.dunkT >= 1) {
+      dunk.dunkT = 1;
+      if (dunk.tier === 4) dunk.phase = 'landed';   // stuck — no landing
+      else { dunk.phase = 'landing'; dunk.landT = 0; }
+    }
+  }
+  else if (dunk.phase === 'landing')  { dunk.landT += dt / DUNK.LAND_DUR; if (dunk.landT >= 1) { dunk.landT = 1; dunk.phase = 'landed'; } }
+}
+
+function dunkDraw(ctx) {
+  const g = dunkGeom();
+  dunkDrawArena(ctx, g);
+  dunkDrawCrowd(ctx, g);
+  dunkDrawCourt(ctx, g);
+  dunkDrawHoop(ctx, g);
+  dunkDrawBoombox(ctx, g);
+  dunkDrawMJ(ctx, g);
+  dunkDrawHUD(ctx, g);
+}
+
+function dunkDrawArena(ctx, g) {
+  // Dark arena interior with spotlights up top
+  const sky = ctx.createLinearGradient(0, 0, 0, g.groundY);
+  sky.addColorStop(0, '#080812');
+  sky.addColorStop(0.4, '#1a1330');
+  sky.addColorStop(1, '#3a2030');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, g.groundY);
+  // Spotlight cones
+  for (let i = 0; i < 4; i++) {
+    const sx = W * (0.15 + i * 0.23);
+    const cone = ctx.createRadialGradient(sx, 0, 10, sx, g.groundY * 0.7, g.groundY);
+    cone.addColorStop(0, `rgba(255, 240, 200, ${0.18 + dunk.hype * 0.25})`);
+    cone.addColorStop(1, 'rgba(255, 200, 100, 0)');
+    ctx.fillStyle = cone;
+    ctx.fillRect(0, 0, W, g.groundY);
+  }
+  // Disco-style accent flashes when hype is high
+  if (dunk.hype > 0.5) {
+    const flash = (Math.sin(performance.now() * 0.012) * 0.5 + 0.5) * (dunk.hype - 0.5) * 2;
+    ctx.fillStyle = `rgba(255, 80, 200, ${flash * 0.08})`;
+    ctx.fillRect(0, 0, W, g.groundY);
+  }
+}
+
+function dunkDrawCrowd(ctx, g) {
+  // Three rows of silhouetted heads + raised arms in the bleachers
+  const rowYs = [g.groundY * 0.50, g.groundY * 0.62, g.groundY * 0.73];
+  const armRaise = Math.min(1, dunk.hype * 1.4);
+  const bobPhase = performance.now() * 0.004;
+  for (let r = 0; r < rowYs.length; r++) {
+    const y = rowYs[r];
+    const headR = (g.isMobile ? 8 : 12) + r * 2;
+    const spacing = headR * 2.6;
+    const offset = (r * 8) % spacing;
+    ctx.fillStyle = `rgba(${10 + r * 4}, ${10 + r * 4}, ${20 + r * 4}, 1)`;
+    for (let x = -spacing + offset; x < W + spacing; x += spacing) {
+      const personSeed = Math.floor(x * 17 + r * 31);
+      const bob = Math.sin(bobPhase + personSeed * 0.7) * armRaise * 4;
+      // Head
+      ctx.beginPath();
+      ctx.arc(x, y + bob, headR, 0, Math.PI * 2);
+      ctx.fill();
+      // Shoulders/body
+      ctx.fillRect(x - headR * 0.9, y + bob + headR * 0.5, headR * 1.8, headR * 1.8);
+      // Arms up — wave higher with hype
+      if (armRaise > 0.05) {
+        const armSwing = Math.sin(bobPhase * 1.3 + personSeed) * 0.3;
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = headR * 0.5;
+        ctx.lineCap = 'round';
+        const armH = headR * (1.6 + armRaise * 1.8);
+        ctx.beginPath();
+        ctx.moveTo(x - headR * 0.5, y + bob + headR * 0.4);
+        ctx.lineTo(x - headR * 0.5 + armSwing * 6, y + bob - armH);
+        ctx.moveTo(x + headR * 0.5, y + bob + headR * 0.4);
+        ctx.lineTo(x + headR * 0.5 - armSwing * 6, y + bob - armH);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function dunkDrawCourt(ctx, g) {
+  // Wood floor with subtle planks
+  const floor = ctx.createLinearGradient(0, g.groundY, 0, H);
+  floor.addColorStop(0, '#c79556');
+  floor.addColorStop(0.5, '#a87436');
+  floor.addColorStop(1, '#6a4418');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, g.groundY, W, H - g.groundY);
+  // Plank lines
+  ctx.strokeStyle = 'rgba(80, 40, 10, 0.45)';
+  ctx.lineWidth = 1;
+  for (let y = g.groundY + 8; y < H; y += 18) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  // Free-throw line + key
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(g.ftLineX, g.groundY + 6);
+  ctx.lineTo(g.ftLineX, g.groundY + (g.isMobile ? 28 : 40));
+  ctx.stroke();
+  // "FT" label
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+  ctx.font = `700 ${g.isMobile ? 10 : 13}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.fillText('FREE THROW', g.ftLineX, g.groundY + (g.isMobile ? 46 : 64));
+}
+
+function dunkDrawHoop(ctx, g) {
+  // Pole behind the backboard
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = g.isMobile ? 6 : 10;
+  ctx.lineCap = 'square';
+  ctx.beginPath();
+  ctx.moveTo(g.hoopRimX + g.hoopRimR * 1.7, g.groundY);
+  ctx.lineTo(g.hoopRimX + g.hoopRimR * 1.7, g.hoopRimY - g.hoopRimR * 1.4);
+  ctx.stroke();
+  // Backboard
+  const bbW = g.hoopRimR * 3.4;
+  const bbH = g.hoopRimR * 2.2;
+  const bbX = g.hoopRimX + g.hoopRimR * 0.3;
+  const bbY = g.hoopRimY - bbH * 0.7;
+  ctx.fillStyle = '#f4f1e6';
+  ctx.fillRect(bbX, bbY, bbW, bbH);
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bbX, bbY, bbW, bbH);
+  // Inner shooter's box
+  ctx.strokeStyle = '#c33';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bbX + bbW * 0.32, bbY + bbH * 0.42, bbW * 0.36, bbH * 0.42);
+  // Rim
+  ctx.strokeStyle = '#ff5a1f';
+  ctx.lineWidth = g.isMobile ? 4 : 6;
+  ctx.beginPath();
+  ctx.ellipse(g.hoopRimX, g.hoopRimY, g.hoopRimR, g.hoopRimR * 0.32, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Net — series of zigzag lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+  ctx.lineWidth = 1.5;
+  const netH = g.hoopRimR * 1.6;
+  const nodes = 8;
+  for (let i = 0; i <= nodes; i++) {
+    const t = i / nodes;
+    const x1 = g.hoopRimX - g.hoopRimR + 2 * g.hoopRimR * t;
+    const y1 = g.hoopRimY;
+    const wob = Math.sin(performance.now() * 0.003 + i) * (dunk.hype * 3);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(g.hoopRimX - g.hoopRimR * 0.6 + 1.2 * g.hoopRimR * t + wob, y1 + netH);
+    ctx.stroke();
+  }
+  // Cross-weave
+  for (let i = 0; i < nodes; i++) {
+    const t = (i + 0.5) / nodes;
+    const x1 = g.hoopRimX - g.hoopRimR + 2 * g.hoopRimR * t;
+    const xb = g.hoopRimX - g.hoopRimR * 0.6 + 1.2 * g.hoopRimR * (i / nodes);
+    const xb2 = g.hoopRimX - g.hoopRimR * 0.6 + 1.2 * g.hoopRimR * ((i + 1) / nodes);
+    ctx.beginPath();
+    ctx.moveTo(xb, g.hoopRimY + netH);
+    ctx.lineTo(x1, g.hoopRimY + netH * 0.5);
+    ctx.lineTo(xb2, g.hoopRimY + netH);
+    ctx.stroke();
+  }
+}
+
+function dunkDrawBoombox(ctx, g) {
+  const baseScale = 1 + dunk.charge * 0.6;            // grows with charge
+  const pulse = Math.sin(dunk.bumpT) * 0.5 + 0.5;     // 0..1
+  const w = (g.isMobile ? 90 : 130) * baseScale;
+  const h = w * 0.6;
+  const x = g.boomX - w / 2;
+  const y = g.groundY - h;
+  // Body
+  const body = ctx.createLinearGradient(x, y, x, y + h);
+  body.addColorStop(0, '#3a3a40');
+  body.addColorStop(0.5, '#1c1c20');
+  body.addColorStop(1, '#101012');
+  ctx.fillStyle = body;
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.fill();
+  // Speakers — pulse with the beat
+  const spkR = h * 0.32 * (1 + pulse * dunk.charge * 0.15);
+  ctx.fillStyle = '#0a0a0c';
+  for (const sx of [x + w * 0.27, x + w * 0.73]) {
+    ctx.beginPath();
+    ctx.arc(sx, y + h * 0.55, spkR, 0, Math.PI * 2);
+    ctx.fill();
+    // Cone reflection
+    ctx.strokeStyle = `rgba(255, 200, 80, ${0.3 + pulse * dunk.charge * 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(sx, y + h * 0.55, spkR * 0.65, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Tape deck strip in the middle
+  ctx.fillStyle = '#252528';
+  ctx.fillRect(x + w * 0.42, y + h * 0.18, w * 0.16, h * 0.18);
+  // Handle
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = h * 0.08;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.30, y - 6);
+  ctx.quadraticCurveTo(x + w / 2, y - 18 - pulse * 4, x + w * 0.70, y - 6);
+  ctx.stroke();
+  // Antenna
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.85, y);
+  ctx.lineTo(x + w * 0.92, y - h * 0.8 - pulse * 6);
+  ctx.stroke();
+  // BOOM! puffs when louder
+  if (dunk.charge > 0.6) {
+    for (let i = 0; i < 3; i++) {
+      const t = ((performance.now() * 0.001 + i * 0.4) % 1);
+      const r = t * w * 0.9;
+      ctx.strokeStyle = `rgba(255, 200, 80, ${(1 - t) * dunk.charge * 0.35})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h / 2, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+}
+
+// === Michael Jordan (a friendly cartoon stick-figure with the famous 23 jersey)
+function dunkDrawMJ(ctx, g) {
+  let mjX, mjFootY;
+  let armPose = 'stretch';       // 'stretch' | 'run' | 'jump' | 'dunk' | 'land' | 'stuck'
+  let bodyRot = 0;               // for flips
+  let stretchScale = 1;          // how tall he is
+  // Tier-based dunk pose progress
+  const tier = dunk.tier;
+
+  if (dunk.phase === 'pumping') {
+    mjX = g.startX;
+    mjFootY = g.groundY;
+    armPose = 'stretch';
+    // Stretches taller with charge
+    stretchScale = 1 + Math.min(0.6, dunk.charge * 0.32);
+  }
+  else if (dunk.phase === 'running') {
+    // Linear interp from start to free-throw line
+    mjX = g.startX + (g.ftLineX - g.startX) * dunk.runT;
+    mjFootY = g.groundY;
+    armPose = 'run';
+    stretchScale = 1.05;
+  }
+  else if (dunk.phase === 'jumping') {
+    // Arc from FT line to under the rim
+    const t = dunk.jumpT;
+    mjX = g.ftLineX + (g.hoopRimX - g.hoopRimR * 0.4 - g.ftLineX) * t;
+    // Parabolic vertical: peaks just below the rim
+    const peakRise = g.groundY - g.hoopRimY - 30;
+    mjFootY = g.groundY - peakRise * (4 * t * (1 - t) + t);
+    armPose = 'jump';
+    stretchScale = 1.0;
+  }
+  else if (dunk.phase === 'dunking') {
+    mjX = g.hoopRimX - g.hoopRimR * 0.4;
+    mjFootY = g.hoopRimY + 30;     // just below the rim
+    if (tier === 0)      armPose = 'miss';
+    else if (tier === 1) armPose = 'barely';
+    else if (tier === 2) armPose = 'windmill';
+    else if (tier === 3) {
+      armPose = 'flip';
+      bodyRot = -Math.PI * 2 * dunk.dunkT;   // one full flip
+    }
+    else if (tier === 4) armPose = 'stuck';
+    stretchScale = 1.0;
+  }
+  else if (dunk.phase === 'landing') {
+    // Drop back to the floor with a small arc backward
+    const t = dunk.landT;
+    mjX = (g.hoopRimX - g.hoopRimR * 0.4) + (g.ftLineX - (g.hoopRimX - g.hoopRimR * 0.4)) * t * 0.6;
+    mjFootY = g.hoopRimY + 30 + (g.groundY - (g.hoopRimY + 30)) * t * t;
+    armPose = 'land';
+    stretchScale = 1.0;
+  }
+  else { // 'landed'
+    if (tier === 4) {
+      // Stuck in the hoop — stays there
+      mjX = g.hoopRimX;
+      mjFootY = g.hoopRimY + g.hoopRimR * 1.3;
+      armPose = 'stuck';
+    } else {
+      mjX = g.ftLineX * 0.7 + g.startX * 0.3;
+      mjFootY = g.groundY;
+      armPose = 'celebrate';
+    }
+    stretchScale = 1.0;
+  }
+
+  // Draw MJ centered horizontally on mjX, feet at mjFootY
+  const baseH = (g.isMobile ? 110 : 170) * stretchScale;
+  const headR = baseH * 0.10;
+  const bodyW = baseH * 0.22;
+  ctx.save();
+  ctx.translate(mjX, mjFootY);
+  if (bodyRot) ctx.rotate(bodyRot);
+
+  // Stretch wiggle for stretching pose
+  let armAngleL = -Math.PI * 0.55, armAngleR = -Math.PI * 0.45;
+  let legLOff = 0, legROff = 0;
+  let legAngleL = 0, legAngleR = 0;
+
+  const swag = dunk.mjSwagT;
+  if (armPose === 'stretch') {
+    // Cycle through poses based on swag phase
+    const pose = Math.floor(swag) % 5;
+    const p = swag - Math.floor(swag);
+    if (pose === 0) {
+      armAngleL = -Math.PI * 0.5 - Math.sin(p * Math.PI) * 0.3;
+      armAngleR = -Math.PI * 0.5 + Math.sin(p * Math.PI) * 0.3;
+    } else if (pose === 1) {
+      armAngleL = -Math.PI * 0.85;
+      armAngleR = -Math.PI * 0.15;
+    } else if (pose === 2) {
+      armAngleL = -Math.PI * 0.6 + Math.sin(p * Math.PI * 2) * 0.5;
+      armAngleR = -Math.PI * 0.4 - Math.sin(p * Math.PI * 2) * 0.5;
+    } else if (pose === 3) {
+      armAngleL = -Math.PI;
+      armAngleR = 0;
+    } else {
+      armAngleL = -Math.PI * 0.45 - 0.6;
+      armAngleR = -Math.PI * 0.55 + 0.6;
+    }
+  } else if (armPose === 'run') {
+    // Running cycle
+    const cyc = swag * 6;
+    legLOff = Math.sin(cyc) * 8;
+    legROff = -Math.sin(cyc) * 8;
+    legAngleL = Math.sin(cyc) * 0.6;
+    legAngleR = -Math.sin(cyc) * 0.6;
+    armAngleL = -Math.PI * 0.5 + Math.sin(cyc) * 0.8;
+    armAngleR = -Math.PI * 0.5 - Math.sin(cyc) * 0.8;
+  } else if (armPose === 'jump') {
+    armAngleL = -Math.PI * 0.75;
+    armAngleR = -Math.PI * 0.7;
+  } else if (armPose === 'miss') {
+    // Reaches up but ball bounces out
+    armAngleL = -Math.PI * 0.55;
+    armAngleR = -Math.PI * 0.55;
+  } else if (armPose === 'barely') {
+    armAngleL = -Math.PI * 0.55;
+    armAngleR = -Math.PI * 0.5;
+  } else if (armPose === 'windmill') {
+    // Right arm windmills then slams
+    const wm = dunk.dunkT;
+    if (wm < 0.7) armAngleR = -Math.PI * 0.5 + wm * Math.PI * 2.5;
+    else          armAngleR = -Math.PI * 0.5;
+    armAngleL = -Math.PI * 0.6;
+  } else if (armPose === 'flip') {
+    armAngleL = -Math.PI * 0.5;
+    armAngleR = -Math.PI * 0.5;
+  } else if (armPose === 'land') {
+    armAngleL = -Math.PI * 0.3;
+    armAngleR = -Math.PI * 0.7;
+  } else if (armPose === 'stuck') {
+    // Both arms hook the rim, body dangles
+    armAngleL = -Math.PI * 0.5 - 0.3;
+    armAngleR = -Math.PI * 0.5 + 0.3;
+  } else if (armPose === 'celebrate') {
+    armAngleL = -Math.PI * 0.8 + Math.sin(swag * 4) * 0.4;
+    armAngleR = -Math.PI * 0.2 - Math.sin(swag * 4) * 0.4;
+  }
+
+  // Sneakers (so the feet sit on the ground)
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath();
+  ctx.ellipse(-bodyW * 0.35 + legLOff, -2, bodyW * 0.32, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(bodyW * 0.35 + legROff, -2, bodyW * 0.32, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Shorts (white with red trim) + legs as lines
+  const legTopY = -baseH * 0.45;
+  ctx.strokeStyle = '#dac0a0';   // skin tone
+  ctx.lineWidth = bodyW * 0.18;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-bodyW * 0.30, legTopY);
+  const legLEndX = -bodyW * 0.35 + legLOff;
+  ctx.lineTo(legLEndX + Math.sin(legAngleL) * 6, -6);
+  ctx.moveTo(bodyW * 0.30, legTopY);
+  const legREndX = bodyW * 0.35 + legROff;
+  ctx.lineTo(legREndX + Math.sin(legAngleR) * 6, -6);
+  ctx.stroke();
+  // Shorts
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(-bodyW * 0.55, legTopY - 4, bodyW * 1.1, baseH * 0.18);
+  ctx.fillStyle = '#cc1a30';
+  ctx.fillRect(-bodyW * 0.55, legTopY + baseH * 0.14 - 4, bodyW * 1.1, 3);
+  // Jersey (red with white 23)
+  const torsoTopY = legTopY - baseH * 0.32;
+  ctx.fillStyle = '#cc1a30';
+  ctx.beginPath();
+  ctx.moveTo(-bodyW * 0.55, torsoTopY);
+  ctx.lineTo(bodyW * 0.55, torsoTopY);
+  ctx.lineTo(bodyW * 0.60, legTopY - 4);
+  ctx.lineTo(-bodyW * 0.60, legTopY - 4);
+  ctx.closePath();
+  ctx.fill();
+  // White 23
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `900 ${baseH * 0.13}px system-ui`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('23', 0, (torsoTopY + legTopY) / 2);
+  // Neck + head
+  ctx.fillStyle = '#dac0a0';
+  ctx.fillRect(-bodyW * 0.10, torsoTopY - 6, bodyW * 0.20, 8);
+  ctx.beginPath();
+  ctx.arc(0, torsoTopY - headR - 4, headR, 0, Math.PI * 2);
+  ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath();
+  ctx.arc(-headR * 0.32, torsoTopY - headR - 5, headR * 0.10, 0, Math.PI * 2);
+  ctx.arc(headR * 0.32, torsoTopY - headR - 5, headR * 0.10, 0, Math.PI * 2);
+  ctx.fill();
+  // Smile / open mouth (yells with hype)
+  ctx.strokeStyle = '#0a0a0a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const mouthOpen = dunk.hype * headR * 0.4;
+  if (mouthOpen > 2) {
+    ctx.ellipse(0, torsoTopY - headR + 2, headR * 0.20, mouthOpen, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#3a0a0a';
+    ctx.fill();
+  } else {
+    ctx.moveTo(-headR * 0.25, torsoTopY - headR);
+    ctx.quadraticCurveTo(0, torsoTopY - headR + 4, headR * 0.25, torsoTopY - headR);
+    ctx.stroke();
+  }
+  // Tongue out at high hype (MJ trademark)
+  if (dunk.hype > 0.6 || armPose === 'windmill' || armPose === 'flip') {
+    ctx.fillStyle = '#ff5577';
+    ctx.beginPath();
+    ctx.ellipse(headR * 0.18, torsoTopY - headR + 4, headR * 0.18, headR * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Arms
+  ctx.strokeStyle = '#dac0a0';
+  ctx.lineWidth = bodyW * 0.18;
+  const armLen = baseH * 0.38;
+  const armOriginY = torsoTopY + 6;
+  // Left arm
+  ctx.beginPath();
+  ctx.moveTo(-bodyW * 0.45, armOriginY);
+  ctx.lineTo(-bodyW * 0.45 + Math.cos(armAngleL) * armLen,
+             armOriginY + Math.sin(armAngleL) * armLen);
+  ctx.stroke();
+  // Right arm
+  ctx.beginPath();
+  ctx.moveTo(bodyW * 0.45, armOriginY);
+  ctx.lineTo(bodyW * 0.45 + Math.cos(armAngleR) * armLen,
+             armOriginY + Math.sin(armAngleR) * armLen);
+  ctx.stroke();
+  // Basketball in hand for dunking / jumping phases (right hand)
+  if (armPose === 'jump' || armPose === 'windmill' || armPose === 'barely' || armPose === 'flip') {
+    const bx = bodyW * 0.45 + Math.cos(armAngleR) * armLen;
+    const by = armOriginY + Math.sin(armAngleR) * armLen;
+    const br = baseH * 0.10;
+    const bg = ctx.createRadialGradient(bx - br * 0.3, by - br * 0.3, br * 0.1, bx, by, br);
+    bg.addColorStop(0, '#ffb978');
+    bg.addColorStop(1, '#a44016');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI * 2);
+    ctx.fill();
+    // Seam lines
+    ctx.strokeStyle = '#1a0a05';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx, by - br);
+    ctx.lineTo(bx, by + br);
+    ctx.moveTo(bx - br, by);
+    ctx.lineTo(bx + br, by);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Tier-specific overlay: missed ball bounces off rim
+  if (dunk.phase === 'dunking' && dunk.tier === 0) {
+    const t = dunk.dunkT;
+    const bx = g.hoopRimX + g.hoopRimR * 0.4 + t * 80;
+    const by = g.hoopRimY - 10 + t * t * 200;
+    const bg = ctx.createRadialGradient(bx - 6, by - 6, 2, bx, by, 18);
+    bg.addColorStop(0, '#ffb978');
+    bg.addColorStop(1, '#a44016');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(bx, by, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function dunkDrawHUD(ctx, g) {
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  if (dunk.phase === 'pumping') {
+    // Same style as trebuchet HUD — large percentage + tier message + bar
+    const tier = dunkChargeTier(dunk.charge);
+    if (tier !== dunk.msgTier) {
+      dunk.msgTier = tier;
+      dunk.msgChangedAt = performance.now();
+    }
+    const tierData = DUNK_TIERS[tier];
+    const tierAge = (performance.now() - dunk.msgChangedAt) / 1000;
+    let popScale = 1;
+    if (tierAge < 0.5) {
+      const p = tierAge / 0.5;
+      popScale = 1 + Math.sin(p * Math.PI) * 0.32 * (1 - p * 0.5);
+    }
+    const isMobile = Math.min(W, H) < 600;
+    // Percentage (big)
+    const pctFontSize = (isMobile ? 56 : 84) * popScale;
+    const pctY = isMobile ? H - 100 : H - 124;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 3;
+    ctx.font = `900 ${pctFontSize}px system-ui`;
+    ctx.fillStyle = tierData.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${Math.round(dunk.charge * 100)}%`, W / 2, pctY);
+    // Tier subtitle
+    const subFont = (isMobile ? 20 : 30) * popScale;
+    ctx.font = `800 ${subFont}px system-ui`;
+    ctx.fillText(tierData.msg, W / 2, pctY + (isMobile ? 42 : 60));
+    ctx.restore();
+    // Progress bar
+    const barW = Math.min(900, W * 0.78);
+    const barH = isMobile ? 10 : 14;
+    const barX = W / 2 - barW / 2;
+    const barY = H - 28;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(ctx, barX - 3, barY - 3, barW + 6, barH + 6, barH); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+    roundRect(ctx, barX, barY, barW, barH, barH / 2); ctx.fill();
+    const fillW = barW * Math.min(1, dunk.charge);
+    if (fillW > 1) {
+      const cg = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      cg.addColorStop(0, '#6bcf7f');
+      cg.addColorStop(0.55, '#ffd93d');
+      cg.addColorStop(1, '#ff6b6b');
+      ctx.fillStyle = cg;
+      roundRect(ctx, barX, barY, fillW, barH, barH / 2); ctx.fill();
+    }
+    if (dunk.charge > 1.0) {
+      const ow = barW * Math.min(0.5, (dunk.charge - 1.0) * 0.35);
+      const hotG = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      hotG.addColorStop(0, 'rgba(255,140,60,0)');
+      hotG.addColorStop(1, 'rgba(255,80,220,0.85)');
+      ctx.fillStyle = hotG;
+      roundRect(ctx, barX + barW - ow, barY, ow, barH, barH / 2); ctx.fill();
+    }
+  } else if (dunk.phase === 'landed') {
+    // Result text
+    const isMobile = Math.min(W, H) < 600;
+    const titleSize = isMobile ? 50 : 86;
+    const subSize = isMobile ? 18 : 26;
+    const titleY = H * 0.18;
+    const subY = titleY + titleSize * 0.7;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.75)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 3;
+    ctx.font = `900 ${titleSize}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const results = [
+      { title: 'CLANG! RIM OUT.',          sub: 'Sing louder next time!' },
+      { title: 'BARELY MADE IT!',          sub: 'A dunk is a dunk.' },
+      { title: 'WINDMILL JAM!',            sub: 'The crowd is electric!' },
+      { title: 'BACKFLIP DUNK!',           sub: '11/10. Judges flip too.' },
+      { title: 'STUCK IN THE HOOP!',       sub: 'Somebody get a ladder...' },
+    ];
+    const r = results[dunk.tier];
+    const titleColors = ['#ffffff', '#6bcf7f', '#ffd93d', '#ff6b6b', '#ff4dd6'];
+    ctx.fillStyle = titleColors[dunk.tier];
+    ctx.fillText(r.title, W / 2, titleY);
+    ctx.font = `700 ${subSize}px system-ui`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(r.sub, W / 2, subY);
+    ctx.restore();
+  }
+}
+
 const COLORS = [
   '#ff6b6b', '#ffd93d', '#6bcf7f', '#4d96ff', '#c780ff',
   '#ff9f43', '#ee5a6f', '#48dbfb', '#1dd1a1', '#feca57',
@@ -2655,9 +3432,11 @@ class Ball {
     const t = Math.random();
     // On phones (any side under ~600px), bump everything bigger so the
     // eyeballs are clearly visible and the bouncing reads from across the room.
+    // On TV-sized displays, also scale up so balls don't look like dots.
     const isMobile = Math.min(W, H) < 600;
-    const minR = isMobile ? 36 : 14;
-    const range = isMobile ? 110 : 95;
+    const tvScale = isMobile ? 1 : Math.max(1, Math.min(W, H) / 800);
+    const minR = (isMobile ? 36 : 14) * tvScale;
+    const range = (isMobile ? 110 : 95) * tvScale;
     this.radius = minR + Math.pow(t, 1.6) * range;
     this.x = x;
     this.y = H - this.radius;
@@ -2731,7 +3510,10 @@ class Ball {
       const splattable =
         mode === 'watermelon' || mode === 'eyeball' || mode === 'popcorn';
       const splatBase = mode === 'popcorn' ? 600 : mode === 'eyeball' ? 1300 : 1000;
-      const splatThreshold = splatBase + this.radius * 4;
+      // Taller screens → balls fall from higher → hit faster naturally.
+      // Scale threshold with √H so they don't pop just from gravity drop.
+      const heightScale = Math.max(1, Math.sqrt(H / 800));
+      const splatThreshold = (splatBase + this.radius * 4) * heightScale;
       if (!this.dormant && impactSpeed > splatThreshold && splattable) {
         this.splatted = true;
         splats.push(new Splat(this.x, this.radius, mode, this.color));
@@ -4306,7 +5088,21 @@ async function startAudio() {
   }
 }
 
-startBtn.addEventListener('click', startAudio);
+// Game cards on the start screen — selecting one sets the mode and boots audio.
+document.querySelectorAll('.gameCard').forEach((card) => {
+  card.addEventListener('click', () => {
+    const game = card.dataset.game;
+    if (game === 'trebuchet') state.ballMode = 'trebuchet';
+    else if (game === 'dunk')  state.ballMode = 'dunk';
+    else                       state.ballMode = 'eyeball';
+    // Reflect selection in the settings panel's mode grid so the user can
+    // see / change it later.
+    document.querySelectorAll('#ballModes .modeBtn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.key === state.ballMode);
+    });
+    startAudio();
+  });
+});
 
 let lastRawRms = 0;       // raw mic RMS before sensitivity
 let lastEffectiveRms = 0; // raw RMS minus the noise gate (when auto on)
@@ -5123,27 +5919,30 @@ function loop(now) {
     noiseFloor += (lastRawRms - noiseFloor) * Math.min(1, dt * 0.06);
   }
 
-  // Auto-sensitivity: only ratchets UPWARDS — when recent peaks aren't
-  // reaching satisfying loudness, raise sensitivity so a normal singing
-  // voice fills the meter. We deliberately never auto-lower sensitivity:
-  // if the kids really crush a song, the output stays pinned at 1.0
-  // (max chaos) rather than being normalized down to "average".
+  // Auto-sensitivity: ratchets UP when peaks aren't reaching satisfying
+  // loudness, and ALSO ratchets DOWN when the kids saturate the meter
+  // (so wild singing doesn't just pin at 100% the whole song).
   // Adjusts only when there's current real signal so silence between
   // songs can't drift the gain up.
   rollingPeakRaw = Math.max(rollingPeakRaw * Math.pow(0.985, dt * 60), lastEffectiveRms, 0.03);
   if (state.autoSensitivity && lastEffectiveRms > 0.008) {
     const scaledPeak = rollingPeakRaw * state.sensitivity;
-    // Boost more aggressively. We want a normal singing voice to fill ~85%
-    // of the meter, so target = 0.85, and we only stop boosting once we're
-    // already close to that. Approach rate is also faster (was 0.6/s).
     if (scaledPeak < 0.78) {
+      // UP: target ~85% fill so normal singing reads as "really going for it"
       const targetSens = 0.85 / Math.max(rollingPeakRaw, 0.01);
-      // If the kids JUST started singing (target much higher than current),
-      // ease in faster so the meter catches up within ~1 second.
       const gap = targetSens - state.sensitivity;
       const rate = gap > 1.5 ? 2.2 : 1.3;
       state.sensitivity += gap * Math.min(1, dt * rate);
-      state.sensitivity = Math.max(0.5, Math.min(25, state.sensitivity));
+      state.sensitivity = Math.max(0.1, Math.min(25, state.sensitivity));
+      sensSlider.value = state.sensitivity;
+      sensVal.textContent = state.sensitivity.toFixed(1) + 'x';
+    } else if (scaledPeak > 1.05) {
+      // DOWN: kids are pinning the meter — back off slowly so peak ≈ 0.92.
+      // Slower than the up-ratchet so a single yell doesn't tank the gain.
+      const targetSens = 0.92 / Math.max(rollingPeakRaw, 0.01);
+      const gap = targetSens - state.sensitivity;
+      state.sensitivity += gap * Math.min(1, dt * 0.6);
+      state.sensitivity = Math.max(0.1, Math.min(25, state.sensitivity));
       sensSlider.value = state.sensitivity;
       sensVal.textContent = state.sensitivity.toFixed(1) + 'x';
     }
@@ -5178,6 +5977,15 @@ function loop(now) {
     trebUpdate(dt, raw, smoothedLoudness, peakLoudness);
     updateFinishBtn();
     trebDraw(ctx, dt);
+    applyPaperOverlay(ctx);
+    requestAnimationFrame(loop);
+    return;
+  }
+  // Dunk Contest mode also takes over the whole screen.
+  if (state.ballMode === 'dunk') {
+    dunkUpdate(dt, raw, smoothedLoudness, peakLoudness);
+    updateFinishBtn();
+    dunkDraw(ctx);
     applyPaperOverlay(ctx);
     requestAnimationFrame(loop);
     return;
@@ -5441,6 +6249,16 @@ function updateFinishBtn() {
     } else {
       finishBtnEl.classList.add('hidden');
     }
+  } else if (state.ballMode === 'dunk') {
+    if (dunk.phase === 'pumping') {
+      finishBtnEl.textContent = 'Dunk it!';
+      finishBtnEl.classList.remove('hidden');
+    } else if (dunk.phase === 'landed') {
+      finishBtnEl.textContent = 'Dunk Again';
+      finishBtnEl.classList.remove('hidden');
+    } else {
+      finishBtnEl.classList.add('hidden');
+    }
   } else {
     finishBtnEl.textContent = 'Finish!';
     // The normal mode show/hide rule (start screen, celebration, etc.) is
@@ -5451,6 +6269,11 @@ finishBtnEl.addEventListener('click', () => {
   if (state.ballMode === 'trebuchet') {
     if (treb.phase === 'cocking') trebFire();
     else if (treb.phase === 'landed' || treb.phase === 'broken') trebReset();
+    return;
+  }
+  if (state.ballMode === 'dunk') {
+    if (dunk.phase === 'pumping') dunkFire();
+    else if (dunk.phase === 'landed') dunkReset();
     return;
   }
   startCelebration();
